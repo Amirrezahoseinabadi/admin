@@ -7,64 +7,61 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;700&display=swap" rel="stylesheet">
     <style>
-        body {
-            font-family: 'Vazirmatn', sans-serif;
-            background-color: #f3f4f6;
-        }
-        .message-user { background-color: #7C3AED; color: white; border-radius: 1rem 1rem 0 1rem; align-self: flex-start; }
-        .message-admin { background-color: #1f2937; color: white; border-radius: 1rem 1rem 1rem 0; align-self: flex-end; }
+        body { font-family: 'Vazirmatn', sans-serif; background-color: #f3f4f6; }
+        .message-user { background-color: #e0e7ff; color: #3730a3; border-radius: 1rem 1rem 1rem 0; align-self: flex-start; }
+        .message-admin { background-color: #4b5563; color: white; border-radius: 1rem 1rem 0 1rem; align-self: flex-end; }
         .ticket-list-item.active { background-color: #e5e7eb; border-right: 4px solid #7C3AED; }
         .status-badge { padding: 0.25rem 0.75rem; border-radius: 9999px; font-size: 0.75rem; font-weight: 500; text-align: center; }
         .status-open { background-color: #fde68a; color: #92400e; }
         .status-answered { background-color: #a7f3d0; color: #065f46; }
         .status-in-progress { background-color: #bae6fd; color: #0c4a6e; }
         .status-closed { background-color: #d1d5db; color: #374151; }
-        
-        #tickets-list-view { display: flex; }
-        #conversation-view { display: none; }
-        
+        #tickets-list-section { display: flex; }
+        #conversation-section { display: none; }
         @media (min-width: 768px) {
             #main-container { display: flex; }
-            #tickets-list-view { display: flex !important; width: 33.333333%; flex-shrink: 0; }
-            #conversation-view { display: flex !important; width: 66.666667%; }
+            #tickets-list-section { display: flex !important; width: 33.333333%; flex-shrink: 0; }
+            #conversation-section { display: flex !important; width: 66.666667%; }
             #back-to-list-btn { display: none; }
         }
     </style>
 </head>
 <body class="h-screen overflow-hidden">
 
-    <div id="main-container" class="h-full">
-        <aside id="tickets-list-view" class="bg-white border-l border-gray-200 h-full flex-col w-full">
+    <div id="main-container" class="h-full flex">
+        <aside id="tickets-list-section" class="bg-white border-l border-gray-200 h-full flex-col w-full md:w-1/3">
             <header class="p-4 border-b border-gray-200 flex-shrink-0">
-                <h1 class="text-xl font-bold text-gray-800">همه تیکت‌ها</h1>
+                <h1 class="text-xl font-bold text-gray-800">تیکت‌ها</h1>
             </header>
             <div id="tickets-list-container" class="flex-grow overflow-y-auto">
                 <div id="no-tickets-admin" class="text-center text-gray-400 p-8">
-                    <p>در حال بارگذاری تیکت‌ها...</p>
+                    <p>در حال بارگذاری...</p>
                 </div>
             </div>
         </aside>
-        <main id="conversation-view" class="flex-col h-full bg-gray-50 w-full">
-            <div id="welcome-panel" class="hidden md:flex items-center justify-center h-full">
+
+        <main id="conversation-section" class="flex-col h-full bg-gray-50 w-full md:w-2/3">
+            <div id="welcome-panel" class="flex items-center justify-center h-full">
                 <div class="text-center text-gray-400">
                     <svg xmlns="http://www.w3.org/2000/svg" class="mx-auto h-24 w-24" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1"><path stroke-linecap="round" stroke-linejoin="round" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" /></svg>
-                    <p class="mt-4 text-lg">برای مشاهده گفتگو، یک تیکت را از لیست انتخاب کنید.</p>
+                    <p class="mt-4 text-lg">برای مشاهده گفتگو، یک تیکت را انتخاب کنید.</p>
                 </div>
             </div>
+
             <div id="conversation-panel" class="hidden flex-col h-full">
                 <header class="p-4 border-b border-gray-200 bg-white flex justify-between items-center flex-shrink-0">
                     <div class="flex items-center">
-                        <button id="back-to-list-btn" class="p-2 rounded-full hover:bg-gray-100 md:hidden mr-2">
-                             <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" /></svg>
+                        <button id="back-to-list-btn" class="p-2 rounded-full hover:bg-gray-100 md:hidden ml-2">
+                             <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-gray-600 transform rotate-180" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" /></svg>
                         </button>
                         <div>
                             <h2 id="conversation-subject" class="text-lg font-bold text-gray-800"></h2>
                             <p id="conversation-user-id" class="text-sm text-gray-500"></p>
                         </div>
                     </div>
-                    <div>
-                        <label for="status-changer" class="text-sm font-medium text-gray-700 sr-only md:not-sr-only">وضعیت:</label>
-                        <select id="status-changer" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md">
+                    <div class="flex items-center">
+                        <label for="status-changer" class="text-sm font-medium text-gray-700 ml-2">وضعیت:</label>
+                        <select id="status-changer" class="w-36 text-sm border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 rounded-md">
                             <option value="open">باز</option>
                             <option value="in-progress">درحال بررسی</option>
                             <option value="answered">پاسخ داده شد</option>
@@ -75,7 +72,7 @@
                 <div id="conversation-container" class="flex-grow overflow-y-auto p-4 space-y-4 flex flex-col"></div>
                 <footer class="p-4 bg-white border-t border-gray-200 flex-shrink-0">
                     <form id="admin-reply-form" class="flex items-center space-x-3 space-x-reverse">
-                        <textarea id="admin-reply-message" rows="1" class="flex-grow p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500" placeholder="پاسخ خود را بنویسید..." required></textarea>
+                        <textarea id="admin-reply-message" rows="1" class="flex-grow p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 resize-none" placeholder="پاسخ خود را بنویسید..." required></textarea>
                         <button type="submit" class="bg-purple-600 text-white px-6 py-2 rounded-md hover:bg-purple-700 transition">ارسال</button>
                     </form>
                 </footer>
@@ -100,8 +97,8 @@
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
 
-        const ticketsListView = document.getElementById('tickets-list-view');
-        const conversationView = document.getElementById('conversation-view');
+        const ticketsListSection = document.getElementById('tickets-list-section');
+        const conversationSection = document.getElementById('conversation-section');
         const ticketsListContainer = document.getElementById('tickets-list-container');
         const noTicketsAdminMessage = document.getElementById('no-tickets-admin');
         const welcomePanel = document.getElementById('welcome-panel');
@@ -123,45 +120,34 @@
             closed: { text: 'بسته شده', className: 'status-closed' },
         };
 
-        function showConversationView() {
-            ticketsListView.style.display = 'none';
-            conversationView.style.display = 'flex';
-        }
-
-        function showTicketListView() {
-            ticketsListView.style.display = 'flex';
-            conversationView.style.display = 'none';
-        }
-        
-        backToListBtn.addEventListener('click', showTicketListView);
+        backToListBtn.addEventListener('click', () => {
+            ticketsListSection.style.display = 'flex';
+            conversationSection.style.display = 'none';
+        });
 
         function fetchAllTickets() {
             const ticketsRef = collection(db, 'tickets');
             const q = query(ticketsRef, orderBy("updatedAt", "desc"));
             onSnapshot(q, (querySnapshot) => {
+                noTicketsAdminMessage.style.display = querySnapshot.empty ? 'block' : 'none';
                 if (querySnapshot.empty) {
-                    ticketsListContainer.innerHTML = '';
                     noTicketsAdminMessage.innerHTML = '<p>هیچ تیکتی یافت نشد.</p>';
-                    noTicketsAdminMessage.style.display = 'block';
-                } else {
-                    noTicketsAdminMessage.style.display = 'none';
-                    const ticketsHtml = querySnapshot.docs.map(doc => renderTicketListItem(doc.id, doc.data())).join('');
-                    ticketsListContainer.innerHTML = ticketsHtml;
-                    document.querySelectorAll('.ticket-list-item').forEach(item => {
-                        item.addEventListener('click', () => {
-                            document.querySelectorAll('.ticket-list-item').forEach(i => i.classList.remove('active'));
-                            item.classList.add('active');
-                            openConversation(item.dataset.id);
-                        });
-                    });
                 }
+                ticketsListContainer.innerHTML = querySnapshot.docs.map(doc => renderTicketListItem(doc.id, doc.data())).join('');
+                document.querySelectorAll('.ticket-list-item').forEach(item => {
+                    item.addEventListener('click', () => {
+                        document.querySelectorAll('.ticket-list-item').forEach(i => i.classList.remove('active'));
+                        item.classList.add('active');
+                        openConversation(item.dataset.id);
+                    });
+                });
             });
         }
 
         function renderTicketListItem(id, data) {
             const status = statusMap[data.status] || { text: 'نامشخص', className: 'status-closed' };
             const lastUpdate = data.updatedAt ? data.updatedAt.toDate().toLocaleString('fa-IR') : 'نامشخص';
-            return `<div class="ticket-list-item p-4 border-b cursor-pointer hover:bg-gray-50" data-id="${id}"><div class="flex justify-between items-center"><p class="font-bold text-gray-800 truncate">${data.subject}</p><span class="status-badge ${status.className}">${status.text}</span></div><p class="text-sm text-gray-500 mt-1">کاربر: ${data.userId}</p><p class="text-xs text-gray-400 mt-2">آخرین بروزرسانی: ${lastUpdate}</p></div>`;
+            return `<div class="ticket-list-item p-4 border-b cursor-pointer hover:bg-gray-50 ${id === currentTicketId ? 'active' : ''}" data-id="${id}"><div class="flex justify-between items-center"><p class="font-bold text-gray-800 truncate">${data.subject}</p><span class="status-badge ${status.className}">${status.text}</span></div><p class="text-sm text-gray-500 mt-1">کاربر: ${data.telegramId || 'ناشناس'}</p><p class="text-xs text-gray-400 mt-2">آخرین بروزرسانی: ${lastUpdate}</p></div>`;
         }
 
         function openConversation(ticketId) {
@@ -170,23 +156,24 @@
             conversationPanel.classList.remove('hidden');
             conversationPanel.classList.add('flex');
             if (window.innerWidth < 768) {
-                showConversationView();
+                ticketsListSection.style.display = 'none';
+                conversationSection.style.display = 'flex';
             }
             if (unsubscribeConversation) unsubscribeConversation();
-            const ticketDocRef = doc(db, 'tickets', ticketId);
-            onSnapshot(ticketDocRef, (doc) => {
+            
+            onSnapshot(doc(db, 'tickets', ticketId), (doc) => {
                 if(doc.exists()) {
                     const ticketData = doc.data();
                     conversationSubject.textContent = ticketData.subject;
-                    conversationUserId.textContent = `شناسه کاربر: ${ticketData.userId}`;
+                    conversationUserId.textContent = `شناسه تلگرام: ${ticketData.telegramId || 'ناشناس'}`;
                     statusChanger.value = ticketData.status;
                 }
             });
+
             const messagesRef = collection(db, 'tickets', ticketId, 'messages');
             const q = query(messagesRef, orderBy("timestamp"));
             unsubscribeConversation = onSnapshot(q, (querySnapshot) => {
-                const messagesHtml = querySnapshot.docs.map(doc => renderMessage(doc.data())).join('');
-                conversationContainer.innerHTML = messagesHtml;
+                conversationContainer.innerHTML = querySnapshot.docs.map(doc => renderMessage(doc.data())).join('');
                 conversationContainer.scrollTop = conversationContainer.scrollHeight;
             });
         }
@@ -194,18 +181,15 @@
         function renderMessage(data) {
             const messageClass = data.sender === 'user' ? 'message-user' : 'message-admin';
             const time = data.timestamp ? data.timestamp.toDate().toLocaleTimeString('fa-IR', { hour: '2-digit', minute: '2-digit'}) : '';
-            return `<div class="flex flex-col max-w-lg ${messageClass}"><div class="p-3"><p class="whitespace-pre-wrap">${data.text}</p></div><span class="text-xs text-gray-400 mt-1 px-2">${time}</span></div>`;
+            return `<div class="p-3 rounded-lg max-w-lg ${messageClass}"><p class="whitespace-pre-wrap text-sm">${data.text}</p><span class="text-xs mt-2 block text-right opacity-70">${time}</span></div>`;
         }
         
         statusChanger.addEventListener('change', async () => {
             if (!currentTicketId) return;
-            const newStatus = statusChanger.value;
-            const ticketRef = doc(db, 'tickets', currentTicketId);
             try {
-                await updateDoc(ticketRef, { status: newStatus, updatedAt: serverTimestamp() });
+                await updateDoc(doc(db, 'tickets', currentTicketId), { status: statusChanger.value, updatedAt: serverTimestamp() });
             } catch (error) {
                 console.error("Error updating status: ", error);
-                alert("خطا در بروزرسانی وضعیت.");
             }
         });
 
@@ -222,7 +206,6 @@
                 adminReplyForm.reset();
             } catch (error) {
                 console.error("Error sending admin reply: ", error);
-                alert("خطا در ارسال پاسخ.");
             }
         });
 
