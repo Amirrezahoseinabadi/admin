@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>پنل ادمین پشتیبانی</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;700&display=swap" rel="stylesheet">
     <style>
         body { font-family: 'Vazirmatn', sans-serif; background-color: #111827; color: #d1d5db; }
@@ -113,21 +114,12 @@
     </div>
 
     <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-        import { getFirestore, collection, query, onSnapshot, doc, orderBy, updateDoc, addDoc, serverTimestamp, getDocs } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+        // 1. اطلاعات اتصال سوپابیس شما
+        const SUPABASE_URL = 'https://zguqvdisadlhvswsnlyy.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpndXF2ZGlzYWRsaHZzd3NubHl5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTU3MTY0MjIsImV4cCI6MjA3MTI5MjQyMn0.f9EgX9-FCJt4cEVqLCf1ZmaOm30rNioKxenRpFsTmak';
 
-        const firebaseConfig = {
-            apiKey: "AIzaSyAjBkdCe-kJK2VFfM3lSFyFiFNXElOCPSg",
-            authDomain: "support-app-final.firebaseapp.com",
-            projectId: "support-app-final",
-            storageBucket: "support-app-final.appspot.com",
-            messagingSenderId: "220983533006",
-            appId: "1:220983533006:web:87f404486afb9f6a06df9f",
-            measurementId: "G-BGBGRWW9SV"
-        };
-
-        const app = initializeApp(firebaseConfig);
-        const db = getFirestore(app);
+        const { createClient } = supabase;
+        const db = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
         const ticketsListSection = document.getElementById('tickets-list-section');
         const conversationSection = document.getElementById('conversation-section');
@@ -146,7 +138,7 @@
         const replyInput = document.getElementById('admin-reply-message');
 
         let currentTicketId = null;
-        let unsubscribeConversation = null;
+        let messagesSubscription = null;
 
         const statusMap = {
             open: { text: 'باز', className: 'status-open' },
@@ -160,87 +152,61 @@
             conversationSection.style.display = 'none';
         });
 
-        async function fetchAllTickets() {
-            const ticketsRef = collection(db, 'tickets');
-            const q = query(ticketsRef);
-            onSnapshot(q, async (querySnapshot) => {
-                noTicketsAdmin.style.display = querySnapshot.empty ? 'flex' : 'none';
-                if (querySnapshot.empty) {
-                    noTicketsText.textContent = 'هیچ تیکتی یافت نشد.';
-                }
-
-                const ticketPromises = querySnapshot.docs.map(async (ticketDoc) => {
-                    const ticketData = ticketDoc.data();
-                    const messagesRef = collection(db, 'tickets', ticketDoc.id, 'messages');
-                    const messagesSnapshot = await getDocs(query(messagesRef));
-                    
-                    let lastAdminMessageTimestamp = null;
-                    messagesSnapshot.docs.forEach(msgDoc => {
-                        const msgData = msgDoc.data();
-                        if (msgData.sender === 'admin') {
-                            lastAdminMessageTimestamp = msgData.timestamp;
-                        }
-                    });
-
-                    let unreadCount = 0;
-                    if (lastAdminMessageTimestamp) {
-                        messagesSnapshot.docs.forEach(msgDoc => {
-                            const msgData = msgDoc.data();
-                            if (msgData.sender === 'user' && msgData.timestamp > lastAdminMessageTimestamp) {
-                                unreadCount++;
-                            }
-                        });
-                    } else {
-                         messagesSnapshot.docs.forEach(msgDoc => {
-                            if (msgDoc.data().sender === 'user') unreadCount++;
-                        });
-                    }
-
-                    return { id: ticketDoc.id, data: ticketData, unreadCount };
-                });
-
-                const ticketsWithUnread = await Promise.all(ticketPromises);
-
-                const sortedTickets = ticketsWithUnread.sort((a, b) => {
-                    const timeA = a.data.updatedAt?.toMillis() || 0;
-                    const timeB = b.data.updatedAt?.toMillis() || 0;
-                    return timeB - timeA;
-                });
-
-                ticketsListContainer.innerHTML = sortedTickets.map(ticket => renderTicketListItem(ticket)).join('');
-                
-                document.querySelectorAll('.ticket-list-item').forEach(item => {
-                    item.addEventListener('click', () => {
-                        document.querySelectorAll('.ticket-list-item').forEach(i => i.classList.remove('active'));
-                        item.classList.add('active');
-                        openConversation(item.dataset.id);
-                    });
-                });
-            }, (error) => {
+        async function fetchAndRenderAllTickets() {
+            const { data: tickets, error } = await db.from('tickets').select('*, messages(*)');
+            if (error) {
                 console.error("Error fetching tickets: ", error);
                 noTicketsText.textContent = 'خطا در بارگذاری تیکت‌ها.';
+                return;
+            }
+
+            noTicketsAdmin.style.display = tickets.length === 0 ? 'flex' : 'none';
+            if (tickets.length === 0) {
+                noTicketsText.textContent = 'هیچ تیکتی یافت نشد.';
+            }
+
+            const ticketsWithUnread = tickets.map(ticket => {
+                const lastAdminMessage = [...ticket.messages].filter(m => m.sender === 'admin').pop();
+                let unreadCount = 0;
+                if (lastAdminMessage) {
+                    unreadCount = ticket.messages.filter(m => m.sender === 'user' && new Date(m.created_at) > new Date(lastAdminMessage.created_at)).length;
+                } else {
+                    unreadCount = ticket.messages.filter(m => m.sender === 'user').length;
+                }
+                return { ...ticket, unreadCount };
+            });
+
+            const sortedTickets = ticketsWithUnread.sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at));
+            ticketsListContainer.innerHTML = sortedTickets.map(ticket => renderTicketListItem(ticket)).join('');
+            
+            document.querySelectorAll('.ticket-list-item').forEach(item => {
+                item.addEventListener('click', () => {
+                    document.querySelectorAll('.ticket-list-item').forEach(i => i.classList.remove('active'));
+                    item.classList.add('active');
+                    openConversation(item.dataset.id);
+                });
             });
         }
 
-        function renderTicketListItem({ id, data, unreadCount }) {
+        function renderTicketListItem(data) {
             const status = statusMap[data.status] || { text: 'نامشخص', className: 'status-closed' };
-            const lastUpdate = data.updatedAt ? data.updatedAt.toDate().toLocaleTimeString('fa-IR', {hour: '2-digit', minute:'2-digit'}) : '';
-            return `<div class="ticket-list-item p-4 border-b border-gray-700 cursor-pointer hover:bg-gray-700 ${id === currentTicketId ? 'active' : ''}" data-id="${id}">
+            const lastUpdate = new Date(data.updated_at).toLocaleTimeString('fa-IR', {hour: '2-digit', minute:'2-digit'});
+            return `<div class="ticket-list-item p-4 border-b border-gray-700 cursor-pointer hover:bg-gray-700 ${data.id === currentTicketId ? 'active' : ''}" data-id="${data.id}">
                         <div class="flex justify-between items-center">
                             <p class="font-bold text-sm text-gray-100 truncate">${data.subject}</p>
                             <div class="flex items-center space-x-2 space-x-reverse">
                                 <span class="status-badge flex-shrink-0">${status.text}</span>
-                                ${unreadCount > 0 ? `<div class="unread-badge">${unreadCount}</div>` : ''}
+                                ${data.unreadCount > 0 ? `<div class="unread-badge">${data.unreadCount}</div>` : ''}
                             </div>
                         </div>
                         <div class="flex justify-between items-baseline text-xs text-gray-400 mt-2">
-                            <p>کاربر (${data.telegramId || 'ناشناس'})</p>
+                            <p>کاربر (${data.telegram_id || 'ناشناس'})</p>
                             <p>${lastUpdate}</p>
                         </div>
                     </div>`;
         }
 
-        function openConversation(ticketId) {
+        async function openConversation(ticketId) {
             currentTicketId = ticketId;
             welcomePanel.style.display = 'none';
             conversationPanel.classList.remove('hidden');
@@ -251,28 +217,37 @@
                 conversationSection.style.display = 'flex';
             }
             
-            if (unsubscribeConversation) unsubscribeConversation();
+            if (messagesSubscription) messagesSubscription.unsubscribe();
             
-            onSnapshot(doc(db, 'tickets', ticketId), (doc) => {
-                if(doc.exists()) {
-                    const ticketData = doc.data();
-                    conversationSubject.textContent = ticketData.subject;
-                    conversationUserId.textContent = `کاربر (${ticketData.telegramId || 'ناشناس'})`;
-                    statusChanger.value = ticketData.status;
-                }
-            });
+            const { data: ticketData, error } = await db.from('tickets').select().eq('id', ticketId).single();
+            if (error) return console.error(error);
 
-            const messagesRef = collection(db, 'tickets', ticketId, 'messages');
-            const q = query(messagesRef, orderBy("timestamp"));
-            unsubscribeConversation = onSnapshot(q, (querySnapshot) => {
-                conversationContainer.innerHTML = querySnapshot.docs.map(doc => renderMessage(doc.data())).join('');
+            conversationSubject.textContent = ticketData.subject;
+            conversationUserId.textContent = `کاربر (${ticketData.telegram_id || 'ناشناس'})`;
+            statusChanger.value = ticketData.status;
+
+            const renderMessages = (messages) => {
+                const sortedMessages = messages.sort((a,b) => new Date(a.created_at) - new Date(b.created_at));
+                conversationContainer.innerHTML = sortedMessages.map(msg => renderMessage(msg)).join('');
                 conversationContainer.scrollTop = conversationContainer.scrollHeight;
-            });
+            };
+
+            messagesSubscription = db
+                .channel(`public:messages:ticket_id=eq.${ticketId}`)
+                .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages', filter: `ticket_id=eq.${ticketId}` }, async payload => {
+                     const { data, error } = await db.from('messages').select().eq('ticket_id', ticketId);
+                     if (data) renderMessages(data);
+                })
+                .subscribe();
+
+            const { data: initialMessages, error: msgError } = await db.from('messages').select().eq('ticket_id', ticketId);
+            if (msgError) console.error(msgError);
+            else renderMessages(initialMessages);
         }
 
         function renderMessage(data) {
             const messageClass = data.sender === 'user' ? 'message-user' : 'message-admin';
-            const time = data.timestamp ? data.timestamp.toDate().toLocaleTimeString('fa-IR', { hour: '2-digit', minute: '2-digit'}) : '';
+            const time = new Date(data.created_at).toLocaleTimeString('fa-IR', { hour: '2-digit', minute: '2-digit'});
             return `<div class="p-3 rounded-lg max-w-lg ${messageClass}">
                         <p class="whitespace-pre-wrap text-sm">${data.text}</p>
                         <span class="text-xs mt-2 block text-right opacity-70">${time}</span>
@@ -281,25 +256,27 @@
         
         statusChanger.addEventListener('change', async () => {
             if (!currentTicketId) return;
-            try {
-                await updateDoc(doc(db, 'tickets', currentTicketId), { status: statusChanger.value, updatedAt: serverTimestamp() });
-            } catch (error) {
-                console.error("Error updating status: ", error);
-            }
+            const { error } = await db.from('tickets').update({ status: statusChanger.value, updated_at: new Date() }).eq('id', currentTicketId);
+            if (error) console.error("Error updating status: ", error);
         });
 
         async function submitAdminReply() {
             if (!currentTicketId) return;
             const messageText = replyInput.value.trim();
             if (messageText === '') return;
-            try {
-                const ticketRef = doc(db, 'tickets', currentTicketId);
-                await addDoc(collection(ticketRef, 'messages'), { sender: 'admin', text: messageText, timestamp: serverTimestamp() });
-                await updateDoc(ticketRef, { status: 'answered', updatedAt: serverTimestamp() });
-                adminReplyForm.reset();
-            } catch (error) {
-                console.error("Error sending admin reply: ", error);
-            }
+
+            const { error: msgError } = await db.from('messages').insert([{ 
+                sender: 'admin', 
+                text: messageText, 
+                ticket_id: currentTicketId 
+            }]);
+
+            if (msgError) return console.error("Error sending reply: ", msgError);
+
+            const { error: ticketError } = await db.from('tickets').update({ status: 'answered', updated_at: new Date() }).eq('id', currentTicketId);
+            if (ticketError) return console.error("Error updating ticket status: ", ticketError);
+            
+            adminReplyForm.reset();
         }
 
         adminReplyForm.addEventListener('submit', (e) => {
@@ -314,7 +291,6 @@
             }
         });
 
-        // --- Resizer Logic ---
         let isResizing = false;
         resizer.addEventListener('mousedown', (e) => {
             isResizing = true;
@@ -335,7 +311,13 @@
             }
         }
 
-        fetchAllTickets();
+        db.channel('public-db-changes')
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'tickets' }, payload => fetchAndRenderAllTickets())
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'messages' }, payload => fetchAndRenderAllTickets())
+            .subscribe();
+
+        // Initial Load
+        fetchAndRenderAllTickets();
     </script>
 </body>
 </html>
