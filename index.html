@@ -1,323 +1,125 @@
-<!DOCTYPE html>
-<html lang="fa" dir="rtl">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>پنل ادمین پشتیبانی</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;700&display=swap" rel="stylesheet">
-    <style>
-        body { font-family: 'Vazirmatn', sans-serif; background-color: #111827; color: #d1d5db; }
-        .message-user { background-color: #374151; color: #f9fafb; border-radius: 1rem 1rem 1rem 0; align-self: flex-start; }
-        .message-admin { background-color: #4f46e5; color: white; border-radius: 1rem 1rem 0 1rem; align-self: flex-end; }
-        .ticket-list-item.active { background-color: #1f2937; border-right: 4px solid #6366f1; }
-        .status-badge { padding: 0.25rem 0.75rem; border-radius: 9999px; font-size: 0.7rem; font-weight: 500; text-align: center; }
-        
-        .status-open { background-color: #dcfce7; color: #166534; }
-        .status-in-progress { background-color: #fef3c7; color: #92400e; }
-        .status-answered { background-color: #e5e7eb; color: #374151; }
-        .status-closed { background-color: #fee2e2; color: #991b1b; }
+<script type="module">
+    const SUPABASE_URL = 'https://zguqvdisadlhvswsnlyy.supabase.co';
+    const SUPABASE_ANON_KEY = 'YOUR_SUPABASE_ANON_KEY';
+    const { createClient } = supabase;
+    const db = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-        .unread-badge {
-            background-color: #4f46e5;
-            color: white;
-            border-radius: 9999px;
-            width: 22px;
-            height: 22px;
-            font-size: 12px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: bold;
-            flex-shrink: 0;
+    const ticketsListSection = document.getElementById('tickets-list-section');
+    const conversationSection = document.getElementById('conversation-section');
+    const ticketsListContainer = document.getElementById('tickets-list-container');
+    const noTicketsAdmin = document.getElementById('no-tickets-admin');
+    const noTicketsText = document.getElementById('no-tickets-text');
+    const welcomePanel = document.getElementById('welcome-panel');
+    const conversationPanel = document.getElementById('conversation-panel');
+    const conversationSubject = document.getElementById('conversation-subject');
+    const conversationUserId = document.getElementById('conversation-user-id');
+    const statusChanger = document.getElementById('status-changer');
+    const conversationContainer = document.getElementById('conversation-container');
+    const adminReplyForm = document.getElementById('admin-reply-form');
+    const backToListBtn = document.getElementById('back-to-list-btn');
+    
+    // Fetch and Render Tickets
+    async function fetchAndRenderAllTickets() {
+        const { data: tickets, error } = await db.from('tickets').select('*, messages(*)');
+        if (error) {
+            console.error("Error fetching tickets: ", error);
+            noTicketsText.textContent = 'خطا در بارگذاری تیکت‌ها.';
+            return;
         }
-
-        #tickets-list-section { display: flex; width: 100%; }
-        #conversation-section { display: none; }
-        #resizer { display: none; }
-
-        @media (min-width: 768px) {
-            #main-container { display: flex; }
-            #tickets-list-section { display: flex !important; width: 350px; flex-shrink: 0; }
-            #conversation-section { display: flex !important; flex-grow: 1; }
-            #back-to-list-btn { display: none; }
-            #resizer {
-                display: block;
-                width: 5px;
-                cursor: col-resize;
-                background-color: #374151;
-                flex-shrink: 0;
+        noTicketsAdmin.style.display = tickets.length === 0 ? 'flex' : 'none';
+        if (tickets.length === 0) {
+            noTicketsText.textContent = 'هیچ تیکتی یافت نشد.';
+        }
+        const ticketsWithUnread = tickets.map(ticket => {
+            const lastAdminMessage = [...ticket.messages].filter(m => m.sender === 'admin').pop();
+            let unreadCount = 0;
+            if (lastAdminMessage) {
+                unreadCount = ticket.messages.filter(m => m.sender === 'user' && new Date(m.created_at) > new Date(lastAdminMessage.created_at)).length;
+            } else {
+                unreadCount = ticket.messages.filter(m => m.sender === 'user').length;
             }
-            #resizer:hover { background-color: #4f46e5; }
-        }
-    </style>
-</head>
-<body class="h-screen overflow-hidden">
-
-    <div id="main-container" class="h-full flex bg-gray-900">
-        <aside id="tickets-list-section" class="bg-gray-800 border-l border-gray-700 h-full flex-col">
-            <header class="p-4 border-b border-gray-700 flex-shrink-0">
-                <h1 class="text-xl font-bold text-white">صندوق ورودی</h1>
-            </header>
-            <div id="tickets-list-container" class="flex-grow overflow-y-auto">
-                <div id="no-tickets-admin" class="text-center text-gray-500 p-8 mt-16 flex flex-col items-center">
-                     <svg class="h-20 w-20 text-gray-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 0 1-2.25 2.25h-15a2.25 2.25 0 0 1-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0 0 19.5 4.5h-15a2.25 2.25 0 0 0-2.25 2.25m19.5 0v.243a2.25 2.25 0 0 1-1.07 1.916l-7.5 4.615a2.25 2.25 0 0 1-2.36 0L3.32 8.91a2.25 2.25 0 0 1-1.07-1.916V6.75" />
-                    </svg>
-                    <p id="no-tickets-text" class="mt-4 text-sm">در حال بارگذاری...</p>
-                </div>
-            </div>
-        </aside>
+            return { ...ticket, unreadCount };
+        });
+        const sortedTickets = ticketsWithUnread.sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at));
+        ticketsListContainer.innerHTML = sortedTickets.map(ticket => renderTicketListItem(ticket)).join('');
         
-        <div id="resizer"></div>
-
-        <main id="conversation-section" class="flex-col h-full bg-gray-900 w-full">
-            <div id="welcome-panel" class="hidden md:flex items-center justify-center h-full">
-                <div class="text-center text-gray-500">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="mx-auto h-24 w-24" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1"><path stroke-linecap="round" stroke-linejoin="round" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" /></svg>
-                    <p class="mt-4 text-lg">برای مشاهده گفتگو، یک تیکت را انتخاب کنید.</p>
-                </div>
-            </div>
-
-            <div id="conversation-panel" class="hidden flex-col h-full">
-                <header class="p-3 border-b border-gray-700 bg-gray-800 flex justify-between items-center flex-shrink-0">
-                    <div class="flex items-center min-w-0">
-                        <button id="back-to-list-btn" class="p-2 rounded-full hover:bg-gray-700 ml-2">
-                             <svg class="h-6 w-6 text-gray-300 transform rotate-180" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" /></svg>
-                        </button>
-                        <div class="min-w-0">
-                            <h2 id="conversation-subject" class="text-md font-bold text-white truncate"></h2>
-                            <p id="conversation-user-id" class="text-xs text-gray-400"></p>
+        document.querySelectorAll('.ticket-list-item').forEach(item => {
+            item.addEventListener('click', () => {
+                document.querySelectorAll('.ticket-list-item').forEach(i => i.classList.remove('active'));
+                item.classList.add('active');
+                openConversation(item.dataset.id);
+            });
+        });
+    }
+    
+    // Render ticket list item
+    function renderTicketListItem(data) {
+        const status = statusMap[data.status] || { text: 'نامشخص', className: 'status-closed' };
+        const lastUpdate = new Date(data.updated_at).toLocaleTimeString('fa-IR', {hour: '2-digit', minute:'2-digit'});
+        return `<div class="ticket-list-item p-4 border-b border-gray-700 cursor-pointer hover:bg-gray-700 ${data.id === currentTicketId ? 'active' : ''}" data-id="${data.id}">
+                    <div class="flex justify-between items-center">
+                        <p class="font-bold text-sm text-gray-100 truncate">${data.subject}</p>
+                        <div class="flex items-center space-x-2 space-x-reverse">
+                            <span class="status-badge flex-shrink-0">${status.text}</span>
+                            ${data.unreadCount > 0 ? `<div class="unread-badge">${data.unreadCount}</div>` : ''}
                         </div>
                     </div>
-                    <div class="flex items-center">
-                        <select id="status-changer" class="w-32 text-xs bg-gray-700 border-gray-600 text-white focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 rounded-md">
-                            <option value="open">باز</option>
-                            <option value="in-progress">درحال بررسی</option>
-                            <option value="answered">پاسخ داده شد</option>
-                            <option value="closed">بسته شده</option>
-                        </select>
+                    <div class="flex justify-between items-baseline text-xs text-gray-400 mt-2">
+                        <p>کاربر (${data.telegram_id || 'ناشناس'})</p>
+                        <p>${lastUpdate}</p>
                     </div>
-                </header>
-                <div id="conversation-container" class="flex-grow overflow-y-auto p-4 space-y-4 flex flex-col"></div>
-                <footer class="p-3 bg-gray-800 border-t border-gray-700 flex-shrink-0">
-                    <form id="admin-reply-form" class="flex items-center space-x-2 space-x-reverse">
-                        <textarea id="admin-reply-message" rows="1" class="flex-grow p-2 bg-gray-700 border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none text-sm text-white" placeholder="پاسخ خود را بنویسید..." required></textarea>
-                        <button type="submit" class="bg-indigo-600 text-white p-2 rounded-md hover:bg-indigo-700 transition flex-shrink-0">
-                            <svg class="w-6 h-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6 12 3.269 3.125A59.769 59.769 0 0 1 21.485 12 59.768 59.768 0 0 1 3.27 20.875L5.999 12Zm0 0h7.5" /></svg>
-                        </button>
-                    </form>
-                </footer>
-            </div>
-        </main>
-    </div>
+                </div>`;
+    }
+    
+    // Open conversation when a ticket is selected
+    async function openConversation(ticketId) {
+        currentTicketId = ticketId;
+        welcomePanel.style.display = 'none';
+        conversationPanel.classList.remove('hidden');
+        conversationPanel.classList.add('flex');
+        
+        if (window.innerWidth < 768) {
+            ticketsListSection.style.display = 'none';
+            conversationSection.style.display = 'flex';
+        }
+        
+        if (messagesSubscription) messagesSubscription.unsubscribe();
+        
+        const { data: ticketData, error } = await db.from('tickets').select().eq('id', ticketId).single();
+        if (error) return console.error(error);
 
-    <script type="module">
-        // 1. اطلاعات اتصال سوپابیس شما
-        const SUPABASE_URL = 'https://zguqvdisadlhvswsnlyy.supabase.co';
-        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpndXF2ZGlzYWRsaHZzd3NubHl5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTU3MTY0MjIsImV4cCI6MjA3MTI5MjQyMn0.f9EgX9-FCJt4cEVqLCf1ZmaOm30rNioKxenRpFsTmak';
+        conversationSubject.textContent = ticketData.subject;
+        conversationUserId.textContent = `کاربر (${ticketData.telegram_id || 'ناشناس'})`;
+        statusChanger.value = ticketData.status;
 
-        const { createClient } = supabase;
-        const db = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-
-        const ticketsListSection = document.getElementById('tickets-list-section');
-        const conversationSection = document.getElementById('conversation-section');
-        const ticketsListContainer = document.getElementById('tickets-list-container');
-        const noTicketsAdmin = document.getElementById('no-tickets-admin');
-        const noTicketsText = document.getElementById('no-tickets-text');
-        const welcomePanel = document.getElementById('welcome-panel');
-        const conversationPanel = document.getElementById('conversation-panel');
-        const conversationSubject = document.getElementById('conversation-subject');
-        const conversationUserId = document.getElementById('conversation-user-id');
-        const statusChanger = document.getElementById('status-changer');
-        const conversationContainer = document.getElementById('conversation-container');
-        const adminReplyForm = document.getElementById('admin-reply-form');
-        const backToListBtn = document.getElementById('back-to-list-btn');
-        const resizer = document.getElementById('resizer');
-        const replyInput = document.getElementById('admin-reply-message');
-
-        let currentTicketId = null;
-        let messagesSubscription = null;
-
-        const statusMap = {
-            open: { text: 'باز', className: 'status-open' },
-            answered: { text: 'پاسخ داده شد', className: 'status-answered' },
-            'in-progress': { text: 'درحال بررسی', className: 'status-in-progress' },
-            closed: { text: 'بسته شده', className: 'status-closed' },
+        const renderMessages = (messages) => {
+            const sortedMessages = messages.sort((a,b) => new Date(a.created_at) - new Date(b.created_at));
+            conversationContainer.innerHTML = sortedMessages.map(msg => renderMessage(msg)).join('');
+            conversationContainer.scrollTop = conversationContainer.scrollHeight;
         };
 
-        backToListBtn.addEventListener('click', () => {
-            ticketsListSection.style.display = 'flex';
-            conversationSection.style.display = 'none';
-        });
-
-        async function fetchAndRenderAllTickets() {
-            const { data: tickets, error } = await db.from('tickets').select('*, messages(*)');
-            if (error) {
-                console.error("Error fetching tickets: ", error);
-                noTicketsText.textContent = 'خطا در بارگذاری تیکت‌ها.';
-                return;
-            }
-
-            noTicketsAdmin.style.display = tickets.length === 0 ? 'flex' : 'none';
-            if (tickets.length === 0) {
-                noTicketsText.textContent = 'هیچ تیکتی یافت نشد.';
-            }
-
-            const ticketsWithUnread = tickets.map(ticket => {
-                const lastAdminMessage = [...ticket.messages].filter(m => m.sender === 'admin').pop();
-                let unreadCount = 0;
-                if (lastAdminMessage) {
-                    unreadCount = ticket.messages.filter(m => m.sender === 'user' && new Date(m.created_at) > new Date(lastAdminMessage.created_at)).length;
-                } else {
-                    unreadCount = ticket.messages.filter(m => m.sender === 'user').length;
-                }
-                return { ...ticket, unreadCount };
-            });
-
-            const sortedTickets = ticketsWithUnread.sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at));
-            ticketsListContainer.innerHTML = sortedTickets.map(ticket => renderTicketListItem(ticket)).join('');
-            
-            document.querySelectorAll('.ticket-list-item').forEach(item => {
-                item.addEventListener('click', () => {
-                    document.querySelectorAll('.ticket-list-item').forEach(i => i.classList.remove('active'));
-                    item.classList.add('active');
-                    openConversation(item.dataset.id);
-                });
-            });
-        }
-
-        function renderTicketListItem(data) {
-            const status = statusMap[data.status] || { text: 'نامشخص', className: 'status-closed' };
-            const lastUpdate = new Date(data.updated_at).toLocaleTimeString('fa-IR', {hour: '2-digit', minute:'2-digit'});
-            return `<div class="ticket-list-item p-4 border-b border-gray-700 cursor-pointer hover:bg-gray-700 ${data.id === currentTicketId ? 'active' : ''}" data-id="${data.id}">
-                        <div class="flex justify-between items-center">
-                            <p class="font-bold text-sm text-gray-100 truncate">${data.subject}</p>
-                            <div class="flex items-center space-x-2 space-x-reverse">
-                                <span class="status-badge flex-shrink-0">${status.text}</span>
-                                ${data.unreadCount > 0 ? `<div class="unread-badge">${data.unreadCount}</div>` : ''}
-                            </div>
-                        </div>
-                        <div class="flex justify-between items-baseline text-xs text-gray-400 mt-2">
-                            <p>کاربر (${data.telegram_id || 'ناشناس'})</p>
-                            <p>${lastUpdate}</p>
-                        </div>
-                    </div>`;
-        }
-
-        async function openConversation(ticketId) {
-            currentTicketId = ticketId;
-            welcomePanel.style.display = 'none';
-            conversationPanel.classList.remove('hidden');
-            conversationPanel.classList.add('flex');
-            
-            if (window.innerWidth < 768) {
-                ticketsListSection.style.display = 'none';
-                conversationSection.style.display = 'flex';
-            }
-            
-            if (messagesSubscription) messagesSubscription.unsubscribe();
-            
-            const { data: ticketData, error } = await db.from('tickets').select().eq('id', ticketId).single();
-            if (error) return console.error(error);
-
-            conversationSubject.textContent = ticketData.subject;
-            conversationUserId.textContent = `کاربر (${ticketData.telegram_id || 'ناشناس'})`;
-            statusChanger.value = ticketData.status;
-
-            const renderMessages = (messages) => {
-                const sortedMessages = messages.sort((a,b) => new Date(a.created_at) - new Date(b.created_at));
-                conversationContainer.innerHTML = sortedMessages.map(msg => renderMessage(msg)).join('');
-                conversationContainer.scrollTop = conversationContainer.scrollHeight;
-            };
-
-            messagesSubscription = db
-                .channel(`public:messages:ticket_id=eq.${ticketId}`)
-                .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages', filter: `ticket_id=eq.${ticketId}` }, async payload => {
-                     const { data, error } = await db.from('messages').select().eq('ticket_id', ticketId);
-                     if (data) renderMessages(data);
-                })
-                .subscribe();
-
-            const { data: initialMessages, error: msgError } = await db.from('messages').select().eq('ticket_id', ticketId);
-            if (msgError) console.error(msgError);
-            else renderMessages(initialMessages);
-        }
-
-        function renderMessage(data) {
-            const messageClass = data.sender === 'user' ? 'message-user' : 'message-admin';
-            const time = new Date(data.created_at).toLocaleTimeString('fa-IR', { hour: '2-digit', minute: '2-digit'});
-            return `<div class="p-3 rounded-lg max-w-lg ${messageClass}">
-                        <p class="whitespace-pre-wrap text-sm">${data.text}</p>
-                        <span class="text-xs mt-2 block text-right opacity-70">${time}</span>
-                    </div>`;
-        }
-        
-        statusChanger.addEventListener('change', async () => {
-            if (!currentTicketId) return;
-            const { error } = await db.from('tickets').update({ status: statusChanger.value, updated_at: new Date() }).eq('id', currentTicketId);
-            if (error) console.error("Error updating status: ", error);
-        });
-
-        async function submitAdminReply() {
-            if (!currentTicketId) return;
-            const messageText = replyInput.value.trim();
-            if (messageText === '') return;
-
-            const { error: msgError } = await db.from('messages').insert([{ 
-                sender: 'admin', 
-                text: messageText, 
-                ticket_id: currentTicketId 
-            }]);
-
-            if (msgError) return console.error("Error sending reply: ", msgError);
-
-            const { error: ticketError } = await db.from('tickets').update({ status: 'answered', updated_at: new Date() }).eq('id', currentTicketId);
-            if (ticketError) return console.error("Error updating ticket status: ", ticketError);
-            
-            adminReplyForm.reset();
-        }
-
-        adminReplyForm.addEventListener('submit', (e) => {
-            e.preventDefault();
-            submitAdminReply();
-        });
-
-        replyInput.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter' && !e.shiftKey) {
-                e.preventDefault(); 
-                submitAdminReply();
-            }
-        });
-
-        let isResizing = false;
-        resizer.addEventListener('mousedown', (e) => {
-            isResizing = true;
-            document.addEventListener('mousemove', handleMouseMove);
-            document.addEventListener('mouseup', () => {
-                isResizing = false;
-                document.removeEventListener('mousemove', handleMouseMove);
-                document.body.style.userSelect = 'auto'; 
-            });
-            document.body.style.userSelect = 'none';
-        });
-
-        function handleMouseMove(e) {
-            if (!isResizing) return;
-            const sidebarWidth = e.clientX;
-            if (sidebarWidth > 250 && sidebarWidth < 600) { 
-                ticketsListSection.style.width = `${sidebarWidth}px`;
-            }
-        }
-
-        db.channel('public-db-changes')
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'tickets' }, payload => fetchAndRenderAllTickets())
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'messages' }, payload => fetchAndRenderAllTickets())
+        messagesSubscription = db
+            .channel(`public:messages:ticket_id=eq.${ticketId}`)
+            .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages', filter: `ticket_id=eq.${ticketId}` }, async payload => {
+                 const { data, error } = await db.from('messages').select().eq('ticket_id', ticketId);
+                 if (data) renderMessages(data);
+            })
             .subscribe();
 
-        // Initial Load
-        fetchAndRenderAllTickets();
-    </script>
-</body>
-</html>
+        const { data: initialMessages, error: msgError } = await db.from('messages').select().eq('ticket_id', ticketId);
+        if (msgError) console.error(msgError);
+        else renderMessages(initialMessages);
+    }
+
+    // Render message
+    function renderMessage(data) {
+        const messageClass = data.sender === 'user' ? 'message-user' : 'message-admin';
+        const time = new Date(data.created_at).toLocaleTimeString('fa-IR', { hour: '2-digit', minute: '2-digit'});
+        return `<div class="p-3 rounded-lg max-w-lg ${messageClass}">
+                    <p class="whitespace-pre-wrap text-sm">${data.text}</p>
+                    <span class="text-xs mt-2 block text-right opacity-70">${time}</span>
+                </div>`;
+    }
+
+    fetchAndRenderAllTickets();
+</script>
