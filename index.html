@@ -39,30 +39,31 @@
         .status-in-progress { background-color: #bae6fd; color: #0c4a6e; }
         .status-closed { background-color: #d1d5db; color: #374151; }
         
-        /* Mobile-first responsive styles */
+        /* === Mobile Responsive Logic === */
+        /* By default, only the ticket list is visible on mobile */
         #tickets-list-view {
-            display: flex; /* Visible by default on mobile */
+            display: flex;
         }
         #conversation-view {
-            display: none; /* Hidden by default on mobile */
+            display: none;
         }
         
-        /* On medium screens and up, use flexbox for side-by-side layout */
+        /* On medium screens (desktop), show both views side-by-side */
         @media (min-width: 768px) {
             #main-container {
                 display: flex;
             }
             #tickets-list-view {
-                display: flex !important; /* Always visible */
-                width: 33.333333%; /* 1/3 width */
+                display: flex !important;
+                width: 33.333333%;
                 flex-shrink: 0;
             }
             #conversation-view {
-                display: flex !important; /* Always visible */
-                width: 66.666667%; /* 2/3 width */
+                display: flex !important;
+                width: 66.666667%;
             }
             #back-to-list-btn {
-                display: none; /* Hide back button on desktop */
+                display: none;
             }
         }
     </style>
@@ -138,6 +139,7 @@
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
         import { getFirestore, collection, query, onSnapshot, doc, orderBy, updateDoc, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
+        // Your web app's Firebase configuration
         const firebaseConfig = {
             apiKey: "AIzaSyB7sMBYNZT0Brk411-vNUy1JE_BV6gXsXo",
             authDomain: "support-bot-app.firebaseapp.com",
