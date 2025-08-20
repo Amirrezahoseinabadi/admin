@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>پنل ادمین پشتیبانی</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Vazirmatn', sans-serif;
+            background-color: #f3f4f6;
+        }
+        .message-user {
+            background-color: #7C3AED;
+            color: white;
+            border-radius: 1rem 1rem 0 1rem;
+            align-self: flex-start;
+        }
+        .message-admin {
+            background-color: #1f2937;
+            color: white;
+            border-radius: 1rem 1rem 1rem 0;
+            align-self: flex-end;
+        }
+        .ticket-list-item.active {
+            background-color: #e5e7eb;
+            border-right: 4px solid #7C3AED;
+        }
+        .status-badge {
+            padding: 0.25rem 0.75rem;
+            border-radius: 9999px;
+            font-size: 0.75rem;
+            font-weight: 500;
+            text-align: center;
+        }
+        .status-open { background-color: #fde68a; color: #92400e; }
+        .status-answered { background-color: #a7f3d0; color: #065f46; }
+        .status-in-progress { background-color: #bae6fd; color: #0c4a6e; }
+        .status-closed { background-color: #d1d5db; color: #374151; }
+    </style>
+</head>
+<body class="h-screen overflow-hidden">
+
+    <div class="flex h-full">
+        <!-- Sidebar: Ticket List -->
+        <aside class="w-1/3 bg-white border-l border-gray-200 h-full flex flex-col">
+            <header class="p-4 border-b border-gray-200">
+                <h1 class="text-xl font-bold text-gray-800">همه تیکت‌ها</h1>
+            </header>
+            <div id="tickets-list-container" class="flex-grow overflow-y-auto">
+                <!-- Ticket items will be dynamically inserted here -->
+                 <div id="no-tickets-admin" class="text-center text-gray-400 p-8">
+                    <p>هیچ تیکتی یافت نشد.</p>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Content: Conversation -->
+        <main class="w-2/3 flex flex-col h-full bg-gray-50">
+            <div id="welcome-panel" class="flex items-center justify-center h-full">
+                <div class="text-center text-gray-400">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="mx-auto h-24 w-24" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1">
+                      <path stroke-linecap="round" stroke-linejoin="round" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
+                    </svg>
+                    <p class="mt-4 text-lg">برای مشاهده گفتگو، یک تیکت را از لیست انتخاب کنید.</p>
+                </div>
+            </div>
+
+            <div id="conversation-panel" class="hidden flex-col h-full">
+                <!-- Conversation Header -->
+                <header class="p-4 border-b border-gray-200 bg-white flex justify-between items-center flex-shrink-0">
+                    <div>
+                        <h2 id="conversation-subject" class="text-lg font-bold text-gray-800">موضوع تیکت</h2>
+                        <p id="conversation-user-id" class="text-sm text-gray-500">شناسه کاربر: </p>
+                    </div>
+                    <div>
+                        <label for="status-changer" class="text-sm font-medium text-gray-700">تغییر وضعیت:</label>
+                        <select id="status-changer" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md">
+                            <option value="open">باز</option>
+                            <option value="in-progress">درحال بررسی</option>
+                            <option value="answered">پاسخ داده شد</option>
+                            <option value="closed">بسته شده</option>
+                        </select>
+                    </div>
+                </header>
+
+                <!-- Messages Area -->
+                <div id="conversation-container" class="flex-grow overflow-y-auto p-4 space-y-4 flex flex-col">
+                    <!-- Messages will be dynamically inserted here -->
+                </div>
+
+                <!-- Reply Form -->
+                <footer class="p-4 bg-white border-t border-gray-200 flex-shrink-0">
+                    <form id="admin-reply-form" class="flex items-center space-x-3 space-x-reverse">
+                        <textarea id="admin-reply-message" rows="1" class="flex-grow p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500" placeholder="پاسخ خود را بنویسید..." required></textarea>
+                        <button type="submit" class="bg-purple-600 text-white px-6 py-2 rounded-md hover:bg-purple-700 transition">ارسال</button>
+                    </form>
+                </footer>
+            </div>
+        </main>
+    </div>
+
+    <!-- Firebase SDK -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+        import { getFirestore, collection, query, onSnapshot, doc, orderBy, updateDoc, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+        // IMPORTANT: Use the SAME Firebase config as your user-facing app
+        const firebaseConfig = {
+            apiKey: "AIzaSyB7sMBYNZT0Brk411-vNUy1JE_BV6gXsXo",
+            authDomain: "support-bot-app.firebaseapp.com",
+            projectId: "support-bot-app",
+            storageBucket: "support-bot-app.appspot.com",
+            messagingSenderId: "444176603708",
+            appId: "1:444176603708:web:a3b5938737a8752b824139",
+            measurementId: "G-MWZ1PSNVVV"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        // --- DOM Elements ---
+        const ticketsListContainer = document.getElementById('tickets-list-container');
+        const noTicketsAdminMessage = document.getElementById('no-tickets-admin');
+        const welcomePanel = document.getElementById('welcome-panel');
+        const conversationPanel = document.getElementById('conversation-panel');
+        const conversationSubject = document.getElementById('conversation-subject');
+        const conversationUserId = document.getElementById('conversation-user-id');
+        const statusChanger = document.getElementById('status-changer');
+        const conversationContainer = document.getElementById('conversation-container');
+        const adminReplyForm = document.getElementById('admin-reply-form');
+
+        let currentTicketId = null;
+        let unsubscribeConversation = null;
+
+        const statusMap = {
+            open: { text: 'باز', className: 'status-open' },
+            answered: { text: 'پاسخ داده شد', className: 'status-answered' },
+            'in-progress': { text: 'درحال بررسی', className: 'status-in-progress' },
+            closed: { text: 'بسته شده', className: 'status-closed' },
+        };
+
+        // --- Fetch and Render All Tickets ---
+        function fetchAllTickets() {
+            const ticketsRef = collection(db, 'tickets');
+            const q = query(ticketsRef, orderBy("updatedAt", "desc"));
+
+            onSnapshot(q, (querySnapshot) => {
+                if (querySnapshot.empty) {
+                    ticketsListContainer.innerHTML = '';
+                    noTicketsAdminMessage.style.display = 'block';
+                } else {
+                    noTicketsAdminMessage.style.display = 'none';
+                    const ticketsHtml = querySnapshot.docs.map(doc => renderTicketListItem(doc.id, doc.data())).join('');
+                    ticketsListContainer.innerHTML = ticketsHtml;
+
+                    document.querySelectorAll('.ticket-list-item').forEach(item => {
+                        item.addEventListener('click', () => {
+                            // Highlight active item
+                            document.querySelectorAll('.ticket-list-item').forEach(i => i.classList.remove('active'));
+                            item.classList.add('active');
+                            openConversation(item.dataset.id);
+                        });
+                    });
+                }
+            });
+        }
+
+        function renderTicketListItem(id, data) {
+            const status = statusMap[data.status] || { text: 'نامشخص', className: 'status-closed' };
+            const lastUpdate = data.updatedAt ? data.updatedAt.toDate().toLocaleString('fa-IR') : 'نامشخص';
+
+            return `
+                <div class="ticket-list-item p-4 border-b cursor-pointer hover:bg-gray-50" data-id="${id}">
+                    <div class="flex justify-between items-center">
+                        <p class="font-bold text-gray-800 truncate">${data.subject}</p>
+                        <span class="status-badge ${status.className}">${status.text}</span>
+                    </div>
+                    <p class="text-sm text-gray-500 mt-1">کاربر: ${data.userId}</p>
+                    <p class="text-xs text-gray-400 mt-2">آخرین بروزرسانی: ${lastUpdate}</p>
+                </div>
+            `;
+        }
+
+        // --- Open and Render a Conversation ---
+        function openConversation(ticketId) {
+            currentTicketId = ticketId;
+            welcomePanel.style.display = 'none';
+            conversationPanel.classList.remove('hidden');
+            conversationPanel.classList.add('flex');
+
+            if (unsubscribeConversation) unsubscribeConversation();
+
+            // Fetch ticket details for header
+            const ticketDocRef = doc(db, 'tickets', ticketId);
+            onSnapshot(ticketDocRef, (doc) => {
+                if(doc.exists()) {
+                    const ticketData = doc.data();
+                    conversationSubject.textContent = ticketData.subject;
+                    conversationUserId.textContent = `شناسه کاربر: ${ticketData.userId}`;
+                    statusChanger.value = ticketData.status;
+                }
+            });
+
+            // Fetch messages
+            const messagesRef = collection(db, 'tickets', ticketId, 'messages');
+            const q = query(messagesRef, orderBy("timestamp"));
+
+            unsubscribeConversation = onSnapshot(q, (querySnapshot) => {
+                const messagesHtml = querySnapshot.docs.map(doc => renderMessage(doc.data())).join('');
+                conversationContainer.innerHTML = messagesHtml;
+                conversationContainer.scrollTop = conversationContainer.scrollHeight;
+            });
+        }
+
+        function renderMessage(data) {
+            const messageClass = data.sender === 'user' ? 'message-user' : 'message-admin';
+            const time = data.timestamp ? data.timestamp.toDate().toLocaleTimeString('fa-IR', { hour: '2-digit', minute: '2-digit'}) : '';
+
+            return `
+                <div class="flex flex-col max-w-lg ${messageClass}">
+                    <div class="p-3">
+                        <p class="whitespace-pre-wrap">${data.text}</p>
+                    </div>
+                    <span class="text-xs text-gray-400 mt-1 px-2">${time}</span>
+                </div>
+            `;
+        }
+        
+        // --- Event Handlers ---
+        
+        // Change ticket status
+        statusChanger.addEventListener('change', async () => {
+            if (!currentTicketId) return;
+            const newStatus = statusChanger.value;
+            const ticketRef = doc(db, 'tickets', currentTicketId);
+            try {
+                await updateDoc(ticketRef, {
+                    status: newStatus,
+                    updatedAt: serverTimestamp()
+                });
+            } catch (error) {
+                console.error("Error updating status: ", error);
+                alert("خطا در بروزرسانی وضعیت.");
+            }
+        });
+
+        // Admin reply form submission
+        adminReplyForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            if (!currentTicketId) return;
+
+            const replyInput = document.getElementById('admin-reply-message');
+            const messageText = replyInput.value.trim();
+            if (messageText === '') return;
+
+            try {
+                const ticketRef = doc(db, 'tickets', currentTicketId);
+                // 1. Add new message to subcollection
+                await addDoc(collection(ticketRef, 'messages'), {
+                    sender: 'admin',
+                    text: messageText,
+                    timestamp: serverTimestamp()
+                });
+                
+                // 2. Update the ticket's status to 'answered' and last update time
+                await updateDoc(ticketRef, {
+                    status: 'answered',
+                    updatedAt: serverTimestamp()
+                });
+                
+                adminReplyForm.reset();
+            } catch (error) {
+                console.error("Error sending admin reply: ", error);
+                alert("خطا در ارسال پاسخ.");
+            }
+        });
+
+        // --- Initial Load ---
+        fetchAllTickets();
+    </script>
+</body>
+</html>
