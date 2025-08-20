@@ -131,18 +131,15 @@
         const logoutBtn = document.getElementById('logout-btn');
         
         // --- Auth Logic ---
-        onAuthStateChanged(auth, async (user) => {
+        onAuthStateChanged(auth, (user) => {
             if (user) {
-                const adminRef = doc(db, "admins", user.uid);
-                const adminDoc = await getDoc(adminRef);
-                if (adminDoc.exists() && adminDoc.data().isAdmin === true) {
-                    loginView.style.display = 'none';
-                    adminPanelView.style.display = 'block';
-                    startAdminPanel();
-                } else {
-                    await signOut(auth);
-                }
+                // If a user is logged in, the admin panel is shown.
+                // The check for *if* they are an admin happens at login time.
+                loginView.style.display = 'none';
+                adminPanelView.style.display = 'block';
+                startAdminPanel();
             } else {
+                // User is signed out, show the login form
                 loginView.style.display = 'flex';
                 adminPanelView.style.display = 'none';
             }
@@ -153,8 +150,28 @@
             const email = loginForm.email.value;
             const password = loginForm.password.value;
             loginError.classList.add('hidden');
+
             signInWithEmailAndPassword(auth, email, password)
+                .then(async (userCredential) => {
+                    // Step 1: Login successful.
+                    const user = userCredential.user;
+                    
+                    // Step 2: Check if this user is an admin in Firestore.
+                    const adminRef = doc(db, "admins", user.uid);
+                    const adminDoc = await getDoc(adminRef);
+
+                    if (adminDoc.exists() && adminDoc.data().isAdmin === true) {
+                        // Success! User is an admin.
+                        // The onAuthStateChanged listener will automatically show the panel.
+                    } else {
+                        // This user is NOT an admin. Sign them out immediately and show an error.
+                        await signOut(auth);
+                        loginError.textContent = "شما اجازه دسترسی به این بخش را ندارید.";
+                        loginError.classList.remove('hidden');
+                    }
+                })
                 .catch((error) => {
+                    // This catches wrong email/password errors.
                     console.error("Login failed:", error);
                     loginError.textContent = "ایمیل یا رمز عبور اشتباه است.";
                     loginError.classList.remove('hidden');
