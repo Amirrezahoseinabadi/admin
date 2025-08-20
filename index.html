@@ -38,27 +38,54 @@
         .status-answered { background-color: #a7f3d0; color: #065f46; }
         .status-in-progress { background-color: #bae6fd; color: #0c4a6e; }
         .status-closed { background-color: #d1d5db; color: #374151; }
+        
+        /* Mobile-first responsive styles */
+        #tickets-list-view {
+            display: flex; /* Visible by default on mobile */
+        }
+        #conversation-view {
+            display: none; /* Hidden by default on mobile */
+        }
+        
+        /* On medium screens and up, use flexbox for side-by-side layout */
+        @media (min-width: 768px) {
+            #main-container {
+                display: flex;
+            }
+            #tickets-list-view {
+                display: flex !important; /* Always visible */
+                width: 33.333333%; /* 1/3 width */
+                flex-shrink: 0;
+            }
+            #conversation-view {
+                display: flex !important; /* Always visible */
+                width: 66.666667%; /* 2/3 width */
+            }
+            #back-to-list-btn {
+                display: none; /* Hide back button on desktop */
+            }
+        }
     </style>
 </head>
 <body class="h-screen overflow-hidden">
 
-    <div class="flex h-full">
-        <!-- Sidebar: Ticket List -->
-        <aside class="w-1/3 bg-white border-l border-gray-200 h-full flex flex-col">
-            <header class="p-4 border-b border-gray-200">
+    <div id="main-container" class="h-full">
+        <!-- Sidebar: Ticket List View -->
+        <aside id="tickets-list-view" class="bg-white border-l border-gray-200 h-full flex-col w-full">
+            <header class="p-4 border-b border-gray-200 flex-shrink-0">
                 <h1 class="text-xl font-bold text-gray-800">همه تیکت‌ها</h1>
             </header>
             <div id="tickets-list-container" class="flex-grow overflow-y-auto">
-                <!-- Ticket items will be dynamically inserted here -->
-                 <div id="no-tickets-admin" class="text-center text-gray-400 p-8">
-                    <p>هیچ تیکتی یافت نشد.</p>
+                <div id="no-tickets-admin" class="text-center text-gray-400 p-8">
+                    <p>در حال بارگذاری تیکت‌ها...</p>
                 </div>
             </div>
         </aside>
 
-        <!-- Main Content: Conversation -->
-        <main class="w-2/3 flex flex-col h-full bg-gray-50">
-            <div id="welcome-panel" class="flex items-center justify-center h-full">
+        <!-- Main Content: Conversation View -->
+        <main id="conversation-view" class="flex-col h-full bg-gray-50 w-full">
+            <!-- Welcome Panel (shown when no ticket is selected on desktop) -->
+            <div id="welcome-panel" class="hidden md:flex items-center justify-center h-full">
                 <div class="text-center text-gray-400">
                     <svg xmlns="http://www.w3.org/2000/svg" class="mx-auto h-24 w-24" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1">
                       <path stroke-linecap="round" stroke-linejoin="round" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
@@ -67,15 +94,22 @@
                 </div>
             </div>
 
+            <!-- Conversation Panel (content loaded dynamically) -->
             <div id="conversation-panel" class="hidden flex-col h-full">
-                <!-- Conversation Header -->
                 <header class="p-4 border-b border-gray-200 bg-white flex justify-between items-center flex-shrink-0">
-                    <div>
-                        <h2 id="conversation-subject" class="text-lg font-bold text-gray-800">موضوع تیکت</h2>
-                        <p id="conversation-user-id" class="text-sm text-gray-500">شناسه کاربر: </p>
+                    <div class="flex items-center">
+                        <button id="back-to-list-btn" class="p-2 rounded-full hover:bg-gray-100 md:hidden mr-2">
+                             <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                               <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
+                             </svg>
+                        </button>
+                        <div>
+                            <h2 id="conversation-subject" class="text-lg font-bold text-gray-800">موضوع تیکت</h2>
+                            <p id="conversation-user-id" class="text-sm text-gray-500">شناسه کاربر: </p>
+                        </div>
                     </div>
                     <div>
-                        <label for="status-changer" class="text-sm font-medium text-gray-700">تغییر وضعیت:</label>
+                        <label for="status-changer" class="text-sm font-medium text-gray-700 sr-only md:not-sr-only">وضعیت:</label>
                         <select id="status-changer" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md">
                             <option value="open">باز</option>
                             <option value="in-progress">درحال بررسی</option>
@@ -85,12 +119,10 @@
                     </div>
                 </header>
 
-                <!-- Messages Area -->
                 <div id="conversation-container" class="flex-grow overflow-y-auto p-4 space-y-4 flex flex-col">
                     <!-- Messages will be dynamically inserted here -->
                 </div>
 
-                <!-- Reply Form -->
                 <footer class="p-4 bg-white border-t border-gray-200 flex-shrink-0">
                     <form id="admin-reply-form" class="flex items-center space-x-3 space-x-reverse">
                         <textarea id="admin-reply-message" rows="1" class="flex-grow p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500" placeholder="پاسخ خود را بنویسید..." required></textarea>
@@ -106,7 +138,6 @@
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
         import { getFirestore, collection, query, onSnapshot, doc, orderBy, updateDoc, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-        // IMPORTANT: Use the SAME Firebase config as your user-facing app
         const firebaseConfig = {
             apiKey: "AIzaSyB7sMBYNZT0Brk411-vNUy1JE_BV6gXsXo",
             authDomain: "support-bot-app.firebaseapp.com",
@@ -121,6 +152,8 @@
         const db = getFirestore(app);
 
         // --- DOM Elements ---
+        const ticketsListView = document.getElementById('tickets-list-view');
+        const conversationView = document.getElementById('conversation-view');
         const ticketsListContainer = document.getElementById('tickets-list-container');
         const noTicketsAdminMessage = document.getElementById('no-tickets-admin');
         const welcomePanel = document.getElementById('welcome-panel');
@@ -130,6 +163,7 @@
         const statusChanger = document.getElementById('status-changer');
         const conversationContainer = document.getElementById('conversation-container');
         const adminReplyForm = document.getElementById('admin-reply-form');
+        const backToListBtn = document.getElementById('back-to-list-btn');
 
         let currentTicketId = null;
         let unsubscribeConversation = null;
@@ -141,7 +175,18 @@
             closed: { text: 'بسته شده', className: 'status-closed' },
         };
 
-        // --- Fetch and Render All Tickets ---
+        function showConversationView() {
+            ticketsListView.style.display = 'none';
+            conversationView.style.display = 'flex';
+        }
+
+        function showTicketListView() {
+            ticketsListView.style.display = 'flex';
+            conversationView.style.display = 'none';
+        }
+        
+        backToListBtn.addEventListener('click', showTicketListView);
+
         function fetchAllTickets() {
             const ticketsRef = collection(db, 'tickets');
             const q = query(ticketsRef, orderBy("updatedAt", "desc"));
@@ -149,6 +194,7 @@
             onSnapshot(q, (querySnapshot) => {
                 if (querySnapshot.empty) {
                     ticketsListContainer.innerHTML = '';
+                    noTicketsAdminMessage.innerHTML = '<p>هیچ تیکتی یافت نشد.</p>';
                     noTicketsAdminMessage.style.display = 'block';
                 } else {
                     noTicketsAdminMessage.style.display = 'none';
@@ -157,7 +203,6 @@
 
                     document.querySelectorAll('.ticket-list-item').forEach(item => {
                         item.addEventListener('click', () => {
-                            // Highlight active item
                             document.querySelectorAll('.ticket-list-item').forEach(i => i.classList.remove('active'));
                             item.classList.add('active');
                             openConversation(item.dataset.id);
@@ -170,29 +215,22 @@
         function renderTicketListItem(id, data) {
             const status = statusMap[data.status] || { text: 'نامشخص', className: 'status-closed' };
             const lastUpdate = data.updatedAt ? data.updatedAt.toDate().toLocaleString('fa-IR') : 'نامشخص';
-
-            return `
-                <div class="ticket-list-item p-4 border-b cursor-pointer hover:bg-gray-50" data-id="${id}">
-                    <div class="flex justify-between items-center">
-                        <p class="font-bold text-gray-800 truncate">${data.subject}</p>
-                        <span class="status-badge ${status.className}">${status.text}</span>
-                    </div>
-                    <p class="text-sm text-gray-500 mt-1">کاربر: ${data.userId}</p>
-                    <p class="text-xs text-gray-400 mt-2">آخرین بروزرسانی: ${lastUpdate}</p>
-                </div>
-            `;
+            return `<div class="ticket-list-item p-4 border-b cursor-pointer hover:bg-gray-50" data-id="${id}"><div class="flex justify-between items-center"><p class="font-bold text-gray-800 truncate">${data.subject}</p><span class="status-badge ${status.className}">${status.text}</span></div><p class="text-sm text-gray-500 mt-1">کاربر: ${data.userId}</p><p class="text-xs text-gray-400 mt-2">آخرین بروزرسانی: ${lastUpdate}</p></div>`;
         }
 
-        // --- Open and Render a Conversation ---
         function openConversation(ticketId) {
             currentTicketId = ticketId;
             welcomePanel.style.display = 'none';
             conversationPanel.classList.remove('hidden');
             conversationPanel.classList.add('flex');
+            
+            // On mobile, switch views
+            if (window.innerWidth < 768) {
+                showConversationView();
+            }
 
             if (unsubscribeConversation) unsubscribeConversation();
 
-            // Fetch ticket details for header
             const ticketDocRef = doc(db, 'tickets', ticketId);
             onSnapshot(ticketDocRef, (doc) => {
                 if(doc.exists()) {
@@ -203,10 +241,8 @@
                 }
             });
 
-            // Fetch messages
             const messagesRef = collection(db, 'tickets', ticketId, 'messages');
             const q = query(messagesRef, orderBy("timestamp"));
-
             unsubscribeConversation = onSnapshot(q, (querySnapshot) => {
                 const messagesHtml = querySnapshot.docs.map(doc => renderMessage(doc.data())).join('');
                 conversationContainer.innerHTML = messagesHtml;
@@ -217,59 +253,31 @@
         function renderMessage(data) {
             const messageClass = data.sender === 'user' ? 'message-user' : 'message-admin';
             const time = data.timestamp ? data.timestamp.toDate().toLocaleTimeString('fa-IR', { hour: '2-digit', minute: '2-digit'}) : '';
-
-            return `
-                <div class="flex flex-col max-w-lg ${messageClass}">
-                    <div class="p-3">
-                        <p class="whitespace-pre-wrap">${data.text}</p>
-                    </div>
-                    <span class="text-xs text-gray-400 mt-1 px-2">${time}</span>
-                </div>
-            `;
+            return `<div class="flex flex-col max-w-lg ${messageClass}"><div class="p-3"><p class="whitespace-pre-wrap">${data.text}</p></div><span class="text-xs text-gray-400 mt-1 px-2">${time}</span></div>`;
         }
         
-        // --- Event Handlers ---
-        
-        // Change ticket status
         statusChanger.addEventListener('change', async () => {
             if (!currentTicketId) return;
             const newStatus = statusChanger.value;
             const ticketRef = doc(db, 'tickets', currentTicketId);
             try {
-                await updateDoc(ticketRef, {
-                    status: newStatus,
-                    updatedAt: serverTimestamp()
-                });
+                await updateDoc(ticketRef, { status: newStatus, updatedAt: serverTimestamp() });
             } catch (error) {
                 console.error("Error updating status: ", error);
                 alert("خطا در بروزرسانی وضعیت.");
             }
         });
 
-        // Admin reply form submission
         adminReplyForm.addEventListener('submit', async (e) => {
             e.preventDefault();
             if (!currentTicketId) return;
-
             const replyInput = document.getElementById('admin-reply-message');
             const messageText = replyInput.value.trim();
             if (messageText === '') return;
-
             try {
                 const ticketRef = doc(db, 'tickets', currentTicketId);
-                // 1. Add new message to subcollection
-                await addDoc(collection(ticketRef, 'messages'), {
-                    sender: 'admin',
-                    text: messageText,
-                    timestamp: serverTimestamp()
-                });
-                
-                // 2. Update the ticket's status to 'answered' and last update time
-                await updateDoc(ticketRef, {
-                    status: 'answered',
-                    updatedAt: serverTimestamp()
-                });
-                
+                await addDoc(collection(ticketRef, 'messages'), { sender: 'admin', text: messageText, timestamp: serverTimestamp() });
+                await updateDoc(ticketRef, { status: 'answered', updatedAt: serverTimestamp() });
                 adminReplyForm.reset();
             } catch (error) {
                 console.error("Error sending admin reply: ", error);
