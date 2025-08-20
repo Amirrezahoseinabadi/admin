@@ -127,13 +127,24 @@
 
         function fetchAllTickets() {
             const ticketsRef = collection(db, 'tickets');
-            const q = query(ticketsRef, orderBy("updatedAt", "desc"));
+            // **FIX:** Removed orderBy from the query to prevent Firestore indexing issues.
+            // Sorting will now be done on the client-side.
+            const q = query(ticketsRef);
             onSnapshot(q, (querySnapshot) => {
                 noTicketsAdminMessage.style.display = querySnapshot.empty ? 'block' : 'none';
                 if (querySnapshot.empty) {
                     noTicketsAdminMessage.innerHTML = '<p>هیچ تیکتی یافت نشد.</p>';
                 }
-                ticketsListContainer.innerHTML = querySnapshot.docs.map(doc => renderTicketListItem(doc.id, doc.data())).join('');
+
+                // Sort documents by 'updatedAt' timestamp in descending order here in the browser
+                const sortedDocs = querySnapshot.docs.sort((a, b) => {
+                    const timeA = a.data().updatedAt?.toMillis() || 0;
+                    const timeB = b.data().updatedAt?.toMillis() || 0;
+                    return timeB - timeA;
+                });
+
+                ticketsListContainer.innerHTML = sortedDocs.map(doc => renderTicketListItem(doc.id, doc.data())).join('');
+                
                 document.querySelectorAll('.ticket-list-item').forEach(item => {
                     item.addEventListener('click', () => {
                         document.querySelectorAll('.ticket-list-item').forEach(i => i.classList.remove('active'));
