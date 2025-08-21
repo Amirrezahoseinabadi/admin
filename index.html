@@ -11,47 +11,28 @@
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-storage.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;700&display=swap" rel="stylesheet">
     <style>
-        :root {
-            --bg-main: #f3f4f6; --bg-secondary: #ffffff; --bg-tertiary: #eef2ff;
-            --text-primary: #111827; --text-secondary: #6b7280; --border-color: #e5e7eb;
-            --accent-color: #4f46e5;
-        }
-        .dark {
-            --bg-main: #111827; --bg-secondary: #1f2937; --bg-tertiary: #374151;
-            --text-primary: #f9fafb; --text-secondary: #9ca3af; --border-color: #374151;
-            --accent-color: #6366f1;
-        }
         body { 
             font-family: 'Vazirmatn', sans-serif; 
-            background-color: var(--bg-main);
-            color: var(--text-primary);
-            transition: background-color 0.3s, color 0.3s;
-        }
-        .ticket-list-item, aside, main, header, footer, select, textarea, input {
-             transition: background-color 0.3s, color 0.3s, border-color 0.3s;
+            background-color: #f3f4f6;
+            color: #111827;
         }
         .status-badge { padding: 0.25rem 0.75rem; border-radius: 9999px; font-size: 0.7rem; font-weight: 500; }
-        .status-open { background-color: #dcfce7; color: #166534; }
-        .status-in-progress { background-color: #fef3c7; color: #92400e; }
-        .status-answered { background-color: #e0e7ff; color: #3730a3; }
-        .status-closed { background-color: #fee2e2; color: #991b1b; }
+        .status-open { background-color: #dcfce7; color: #166534; } /* Green */
+        .status-in-progress { background-color: #fef3c7; color: #92400e; } /* Yellow */
+        .status-answered { background-color: #e5e7eb; color: #374151; } /* Gray */
+        .status-closed { background-color: #fee2e2; color: #991b1b; } /* Red */
         
-        .message-user { background-color: var(--bg-secondary); color: var(--text-primary); border-radius: 1rem 1rem 1rem 0.25rem; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
+        .message-user { background-color: #ffffff; color: #1f2937; border-radius: 1rem 1rem 1rem 0.25rem; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
         .message-admin { background-color: #dbeafe; color: #1e40af; border-radius: 1rem 1rem 0.25rem 1rem; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
-        .dark .message-admin { background-color: #312e81; color: #e0e7ff; }
         .sender-name { font-size: 0.8rem; font-weight: 500; margin-bottom: 0.25rem; padding: 0 0.5rem; }
         
         .ticket-list-item.active {
-            background-color: var(--bg-tertiary);
-            border-right: 4px solid var(--accent-color);
+            background-color: #eef2ff;
+            border-right: 4px solid #4f46e5;
         }
         #messages-container {
             background-color: #e5ddd5;
             background-image: url('https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png');
-        }
-        .dark #messages-container {
-            background-color: #0d1117;
-            background-image: url('https://i.imgur.com/39mde3z.png'); /* Dark pattern */
         }
         #file-upload-label, #canned-responses-btn { cursor: pointer; }
         .unread-dot { width: 10px; height: 10px; background-color: #22c55e; border-radius: 9999px; }
@@ -63,61 +44,57 @@
 
     <div class="flex h-full">
         <!-- Sidebar for Tickets List -->
-        <aside class="w-1/3 bg-white dark:bg-gray-800 border-l border-gray-200 dark:border-gray-700 overflow-y-auto flex flex-col">
-            <header class="p-4 border-b dark:border-gray-700 sticky top-0 bg-white dark:bg-gray-800 z-10">
+        <aside class="w-1/3 bg-white border-l border-gray-200 overflow-y-auto flex flex-col">
+            <header class="p-4 border-b sticky top-0 bg-white z-10">
                 <div class="flex justify-between items-center">
                     <h1 class="text-xl font-bold">لیست تیکت‌ها</h1>
-                    <button id="dark-mode-toggle" class="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700">
-                        <svg id="theme-toggle-dark-icon" class="w-5 h-5 hidden" fill="currentColor" viewBox="0 0 20 20"><path d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z"></path></svg>
-                        <svg id="theme-toggle-light-icon" class="w-5 h-5 hidden" fill="currentColor" viewBox="0 0 20 20"><path d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm4 8a4 4 0 11-8 0 4 4 0 018 0zm-.464 4.95l.707.707a1 1 0 001.414-1.414l-.707-.707a1 1 0 00-1.414 1.414zm2.12-10.607a1 1 0 010 1.414l-.706.707a1 1 0 11-1.414-1.414l.707-.707a1 1 0 011.414 0zM17 11a1 1 0 100-2h-1a1 1 0 100 2h1zm-7 4a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zM5.05 6.464A1 1 0 106.465 5.05l-.708-.707a1 1 0 00-1.414 1.414l.707.707zm-.707 10.607a1 1 0 011.414 0l.707-.707a1 1 0 111.414 1.414l-.707.707a1 1 0 01-1.414 0zM1 10a1 1 0 011-1h1a1 1 0 110 2H2a1 1 0 01-1-1z"></path></svg>
-                    </button>
                 </div>
                 <div class="mt-4 space-y-2">
-                    <input type="text" id="search-box" placeholder="جستجو..." class="w-full p-2 border dark:border-gray-600 rounded-md bg-transparent">
+                    <input type="text" id="search-box" placeholder="جستجو..." class="w-full p-2 border rounded-md bg-transparent">
                     <div class="flex space-x-2 space-x-reverse">
-                        <select id="filter-status" class="w-1/2 p-2 border dark:border-gray-600 rounded-md bg-transparent"><option value="all">همه وضعیت‌ها</option><option value="open">باز</option><option value="in-progress">در حال بررسی</option><option value="answered">پاسخ داده شد</option><option value="closed">بسته شده</option></select>
-                        <select id="filter-department" class="w-1/2 p-2 border dark:border-gray-600 rounded-md bg-transparent"><option value="all">همه دپارتمان‌ها</option><option value="general">سوالات متفرقه</option><option value="technical">پشتیبانی فنی</option><option value="sales">بخش فروش</option></select>
+                        <select id="filter-status" class="w-1/2 p-2 border rounded-md bg-transparent"><option value="all">همه وضعیت‌ها</option><option value="open">باز</option><option value="in-progress">در حال بررسی</option><option value="answered">پاسخ داده شد</option><option value="closed">بسته شده</option></select>
+                        <select id="filter-department" class="w-1/2 p-2 border rounded-md bg-transparent"><option value="all">همه دپارتمان‌ها</option><option value="general">سوالات متفرقه</option><option value="technical">پشتیبانی فنی</option><option value="sales">بخش فروش</option></select>
                     </div>
                 </div>
             </header>
-            <div id="tickets-list-container" class="space-y-1 flex-grow">
+            <div id="tickets-list-container" class="p-2 space-y-2 flex-grow">
                 <!-- Skeleton Loader -->
-                <div id="loading-skeleton" class="p-2 space-y-1"></div>
+                <div id="loading-skeleton" class="space-y-2"></div>
             </div>
         </aside>
 
         <!-- Main Conversation View -->
-        <main id="conversation-view" class="w-2/3 flex flex-col bg-gray-50 dark:bg-gray-900">
+        <main id="conversation-view" class="w-2/3 flex flex-col bg-gray-50">
             <div id="welcome-message" class="flex flex-col items-center justify-center h-full text-gray-500">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-24 w-24" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1"><path stroke-linecap="round" stroke-linejoin="round" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" /></svg>
                 <p class="mt-4 text-lg">برای مشاهده گفتگو، یک تیکت را انتخاب کنید.</p>
             </div>
             
             <div id="conversation-content" class="hidden flex-1 flex flex-col">
-                <header class="p-3 border-b dark:border-gray-700 bg-white dark:bg-gray-800 z-10 flex justify-between items-center">
+                <header class="p-3 border-b bg-white z-10 flex justify-between items-center">
                     <div>
                         <h2 id="ticket-subject" class="font-bold text-lg"></h2>
-                        <p id="ticket-user-id" class="text-sm text-gray-500 dark:text-gray-400"></p>
+                        <p id="ticket-user-id" class="text-sm text-gray-500"></p>
                     </div>
                     <div class="flex items-center space-x-3 space-x-reverse">
                         <label for="ticket-status" class="font-medium text-sm">وضعیت:</label>
-                        <select id="ticket-status" class="border dark:border-gray-600 rounded-md p-2 text-sm bg-transparent"><option value="open">باز</option><option value="in-progress">در حال بررسی</option><option value="answered">پاسخ داده شد</option><option value="closed">بسته شده</option></select>
+                        <select id="ticket-status" class="border rounded-md p-2 text-sm bg-transparent"><option value="open">باز</option><option value="in-progress">در حال بررسی</option><option value="answered">پاسخ داده شد</option><option value="closed">بسته شده</option></select>
                     </div>
                 </header>
                 
                 <div id="messages-container" class="flex-1 p-4 overflow-y-auto space-y-4"></div>
 
-                <footer class="p-4 bg-gray-100 dark:bg-gray-800 border-t dark:border-gray-700">
+                <footer class="p-4 bg-gray-100 border-t">
                     <form id="reply-form" class="flex items-center space-x-2 space-x-reverse">
-                        <button type="button" id="canned-responses-btn" class="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700">
+                        <button type="button" id="canned-responses-btn" class="p-2 rounded-full hover:bg-gray-200">
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h7" /></svg>
                         </button>
-                        <label id="file-upload-label" for="file-upload" class="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700">
+                        <label id="file-upload-label" for="file-upload" class="p-2 rounded-full hover:bg-gray-200">
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" /></svg>
                         </label>
                         <input type="file" id="file-upload" class="hidden" accept="image/*">
                         
-                        <textarea id="reply-message" rows="1" class="flex-grow p-2 border dark:border-gray-600 rounded-md focus:ring-2 focus:ring-blue-500 bg-transparent" placeholder="پاسخ خود را بنویسید..."></textarea>
+                        <textarea id="reply-message" rows="1" class="flex-grow p-2 border rounded-md focus:ring-2 focus:ring-blue-500 bg-transparent" placeholder="پاسخ خود را بنویسید..."></textarea>
                         <button type="submit" class="bg-blue-600 text-white font-bold py-2 px-6 rounded-md hover:bg-blue-700 transition">ارسال</button>
                     </form>
                 </footer>
@@ -127,10 +104,10 @@
 
     <!-- Canned Responses Modal -->
     <div id="canned-responses-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
-        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl p-6 w-full max-w-md">
+        <div class="bg-white rounded-lg shadow-xl p-6 w-full max-w-md">
             <h3 class="text-lg font-bold mb-4">پاسخ‌های آماده</h3>
             <div id="canned-list" class="space-y-2 max-h-60 overflow-y-auto"></div>
-            <button id="close-modal-btn" class="mt-4 bg-gray-200 dark:bg-gray-600 px-4 py-2 rounded-md">بستن</button>
+            <button id="close-modal-btn" class="mt-4 bg-gray-200 px-4 py-2 rounded-md">بستن</button>
         </div>
     </div>
     
@@ -190,13 +167,13 @@
 
         function createSkeleton() {
             return `
-                <div class="p-3 border-b dark:border-gray-700 animate-pulse">
+                <div class="p-4 border rounded-lg bg-white animate-pulse">
                     <div class="flex justify-between items-center">
-                        <div class="h-4 bg-gray-300 dark:bg-gray-600 rounded w-3/4"></div>
-                        <div class="h-4 bg-gray-300 dark:bg-gray-600 rounded w-1/4"></div>
+                        <div class="h-4 bg-gray-300 rounded w-3/4"></div>
+                        <div class="h-4 bg-gray-300 rounded w-1/4"></div>
                     </div>
-                    <div class="h-3 bg-gray-300 dark:bg-gray-600 rounded w-1/2 mt-2"></div>
-                    <div class="h-3 bg-gray-300 dark:bg-gray-600 rounded w-1/3 mt-2"></div>
+                    <div class="h-3 bg-gray-300 rounded w-1/2 mt-2"></div>
+                    <div class="h-3 bg-gray-300 rounded w-1/3 mt-2"></div>
                 </div>
             `;
         }
@@ -222,9 +199,10 @@
             const filteredTickets = Object.keys(allTickets).filter(key => {
                 const ticket = allTickets[key];
                 const subjectMatch = ticket.subject.toLowerCase().includes(searchTerm);
+                const userNameMatch = (ticket.user_name || '').toLowerCase().includes(searchTerm);
                 const statusMatch = (status === 'all' || ticket.status === status);
                 const departmentMatch = (department === 'all' || ticket.department === department);
-                return subjectMatch && statusMatch && departmentMatch;
+                return (subjectMatch || userNameMatch) && statusMatch && departmentMatch;
             }).reduce((obj, key) => {
                 obj[key] = allTickets[key];
                 return obj;
@@ -248,7 +226,7 @@
             sortedTickets.forEach(ticket => {
                 const statusInfo = statusMap[ticket.status] || { text: 'نامشخص', className: 'bg-gray-200 text-gray-800' };
                 const ticketElement = document.createElement('div');
-                ticketElement.className = 'ticket-list-item border-b dark:border-gray-700 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700';
+                ticketElement.className = 'ticket-list-item border border-transparent rounded-lg p-3 bg-white cursor-pointer hover:border-blue-300';
                 ticketElement.dataset.ticketId = ticket.id;
                 if (ticket.id === currentTicketId) ticketElement.classList.add('active');
                 
@@ -256,8 +234,10 @@
 
                 ticketElement.innerHTML = `
                     <div class="flex justify-between items-center">
-                        <div class="flex items-center"><p class="font-bold truncate text-sm">${ticket.subject}</p></div>
-                        <span class="status-badge flex-shrink-0">${statusInfo.text}</span>
+                        <div class="flex items-center overflow-hidden">
+                            <p class="font-bold truncate text-sm">${ticket.subject} <span class="font-normal text-gray-500">- ${ticket.user_name || 'کاربر'}</span></p>
+                        </div>
+                        <span class="status-badge flex-shrink-0 ${statusInfo.className}">${statusInfo.text}</span>
                     </div>
                     <div class="flex justify-between items-center mt-2">
                         <p class="text-xs text-gray-500">${departmentMap[ticket.department] || 'نامشخص'}</p>
@@ -283,15 +263,15 @@
 
             let senderName = isUser ? (ticketData.user_name || 'کاربر') : (departmentMap[ticketData.department] || 'پشتیبانی');
 
-            msgElement.className = `flex flex-col max-w-lg w-full ${messageAlign} opacity-0 translate-y-2 transition-all duration-300`;
+            msgElement.className = `flex flex-col max-w-lg ${messageAlign} opacity-0 translate-y-2 transition-all duration-300`;
             
-            let messageContent = msg.text ? `<p class="text-sm">${msg.text.replace(/\n/g, '<br>')}</p>` : 
+            let messageContent = msg.text ? `<p class="text-sm break-words">${msg.text.replace(/\n/g, '<br>')}</p>` : 
                                  msg.imageUrl ? `<a href="${msg.imageUrl}" target="_blank"><img src="${msg.imageUrl}" class="rounded-lg max-w-xs" alt="تصویر ارسال شده"></a>` : '';
 
             msgElement.innerHTML = `
                 <p class="sender-name ${nameAlign} ${nameColor}">${senderName}</p>
                 <div class="p-3 rounded-lg ${bubbleClass}">${messageContent}</div>
-                <span class="text-xs text-gray-500 dark:text-gray-400 mt-1 px-1">${new Date(msg.created_at).toLocaleTimeString('fa-IR')}</span>
+                <span class="text-xs text-gray-500 mt-1 px-1">${new Date(msg.created_at).toLocaleTimeString('fa-IR')}</span>
             `;
             messagesContainer.appendChild(msgElement);
             setTimeout(() => { msgElement.classList.remove('opacity-0', 'translate-y-2'); }, 10);
@@ -382,7 +362,7 @@
         cannedResponses.forEach(text => {
             const btn = document.createElement('button');
             btn.textContent = text;
-            btn.className = 'w-full text-right p-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700';
+            btn.className = 'w-full text-right p-2 rounded-md hover:bg-gray-100';
             btn.onclick = () => {
                 replyMessageInput.value += text;
                 cannedModal.classList.add('hidden');
@@ -393,45 +373,10 @@
         document.getElementById('canned-responses-btn').onclick = () => cannedModal.classList.remove('hidden');
         document.getElementById('close-modal-btn').onclick = () => cannedModal.classList.add('hidden');
 
-        // Dark Mode Logic
-        const darkModeToggle = document.getElementById('dark-mode-toggle');
-        const lightIcon = document.getElementById('theme-toggle-light-icon');
-        const darkIcon = document.getElementById('theme-toggle-dark-icon');
-
-        if (localStorage.getItem('color-theme') === 'dark' || (!('color-theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
-            document.body.classList.add('dark');
-            lightIcon.classList.remove('hidden');
-        } else {
-            darkIcon.classList.remove('hidden');
-        }
-
-        darkModeToggle.addEventListener('click', () => {
-            lightIcon.classList.toggle('hidden');
-            darkIcon.classList.toggle('hidden');
-            if (localStorage.getItem('color-theme')) {
-                if (localStorage.getItem('color-theme') === 'light') {
-                    document.body.classList.add('dark');
-                    localStorage.setItem('color-theme', 'dark');
-                } else {
-                    document.body.classList.remove('dark');
-                    localStorage.setItem('color-theme', 'light');
-                }
-            } else {
-                if (document.body.classList.contains('dark')) {
-                    document.body.classList.remove('dark');
-                    localStorage.setItem('color-theme', 'light');
-                } else {
-                    document.body.classList.add('dark');
-                    localStorage.setItem('color-theme', 'dark');
-                }
-            }
-        });
-
         // Initial load of tickets
         showSkeletonLoader();
         db.ref('tickets').on('value', (snapshot) => {
             const newTickets = snapshot.val() || {};
-            // Check for new messages to play notification sound
             if (Object.keys(allTickets).length > 0) {
                 for (const ticketId in newTickets) {
                     if (newTickets[ticketId].admin_unread && (!allTickets[ticketId] || !allTickets[ticketId].admin_unread)) {
