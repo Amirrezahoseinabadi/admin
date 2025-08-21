@@ -25,22 +25,34 @@
         .status-answered { background-color: #e0e7ff; color: #3730a3; }
         .status-closed { background-color: #fee2e2; color: #991b1b; }
         
-        /* Telegram-like message bubbles */
-        .message-user { background-color: #ffffff; color: #1f2937; border-radius: 1rem 1rem 1rem 0; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
-        .message-admin { background-color: #dbeafe; color: #1e40af; border-radius: 1rem 1rem 0 1rem; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
+        /* Telegram-like message bubbles - UPDATED */
+        .message-user { background-color: #ffffff; color: #1f2937; border-radius: 1rem 1rem 1rem 0.25rem; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
+        .message-admin { background-color: #dbeafe; color: #1e40af; border-radius: 1rem 1rem 0.25rem 1rem; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
+        .sender-name {
+            font-size: 0.8rem;
+            font-weight: 500;
+            margin-bottom: 0.25rem;
+            padding: 0 0.5rem;
+        }
         
         .ticket-list-item.active {
             background-color: #eef2ff;
             border-right: 4px solid #4f46e5;
         }
-        /* Beautiful chat background - UPDATED */
+        /* Beautiful chat background */
         #messages-container {
             background-color: #e5ddd5;
-            /* A reliable link to the default WhatsApp background */
             background-image: url('https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png');
         }
         #file-upload-label {
             cursor: pointer;
+        }
+        /* New Unread Indicator */
+        .unread-dot {
+            width: 10px;
+            height: 10px;
+            background-color: #22c55e; /* green-500 */
+            border-radius: 9999px;
         }
     </style>
 </head>
@@ -116,6 +128,7 @@
         const storage = firebase.storage();
 
         let currentTicketId = null;
+        let currentOpenTicketData = null; // Holds data for the open ticket
         let messagesRef = null;
 
         const ticketsListContainer = document.getElementById('tickets-list-container');
@@ -158,10 +171,16 @@
                 if (ticket.id === currentTicketId) {
                     ticketElement.classList.add('active');
                 }
+                
+                // Add unread dot if admin_unread is true
+                const unreadIndicator = ticket.admin_unread ? '<div class="unread-dot ml-2"></div>' : '';
 
                 ticketElement.innerHTML = `
-                    <div class="flex justify-between items-start">
-                        <p class="font-bold text-gray-800 truncate text-sm">${ticket.subject}</p>
+                    <div class="flex justify-between items-center">
+                        <div class="flex items-center">
+                            ${unreadIndicator}
+                            <p class="font-bold text-gray-800 truncate text-sm">${ticket.subject}</p>
+                        </div>
                         <span class="status-badge flex-shrink-0">${statusInfo.text}</span>
                     </div>
                     <p class="text-xs text-gray-500 mt-1">${departmentMap[ticket.department] || 'نامشخص'}</p>
@@ -172,10 +191,23 @@
             });
         }
         
-        function renderMessage(msg) {
+        function renderMessage(msg, ticketData) {
             const msgElement = document.createElement('div');
-            const messageClass = msg.sender === 'user' ? 'message-user self-start' : 'message-admin self-end';
-            msgElement.className = `flex flex-col max-w-lg ${msg.sender === 'user' ? 'items-start' : 'items-end'} w-full`;
+            const isUser = msg.sender === 'user';
+            
+            const messageAlign = isUser ? 'self-start' : 'self-end';
+            const bubbleClass = isUser ? 'message-user' : 'message-admin';
+            const nameAlign = isUser ? 'text-right' : 'text-left';
+            const nameColor = isUser ? 'text-green-600' : 'text-blue-600';
+
+            let senderName = '';
+            if (isUser) {
+                senderName = ticketData.user_name || 'کاربر'; // Assumes user_name is saved with the ticket
+            } else {
+                senderName = departmentMap[ticketData.department] || 'پشتیبانی';
+            }
+
+            msgElement.className = `flex flex-col max-w-lg w-full ${messageAlign}`;
             
             let messageContent = '';
             if (msg.text) {
@@ -185,7 +217,8 @@
             }
 
             msgElement.innerHTML = `
-                <div class="p-3 rounded-lg ${messageClass}">
+                <p class="sender-name ${nameAlign} ${nameColor}">${senderName}</p>
+                <div class="p-3 rounded-lg ${bubbleClass}">
                     ${messageContent}
                 </div>
                 <span class="text-xs text-gray-500 mt-1 px-1">${new Date(msg.created_at).toLocaleTimeString('fa-IR')}</span>
@@ -196,6 +229,9 @@
         function openConversation(ticketId) {
             if (messagesRef) messagesRef.off();
             currentTicketId = ticketId;
+            
+            // Mark ticket as read by setting admin_unread to false
+            db.ref(`tickets/${ticketId}`).update({ admin_unread: false });
 
             document.querySelectorAll('.ticket-list-item').forEach(el => {
                 el.classList.toggle('active', el.dataset.ticketId === ticketId);
@@ -204,12 +240,12 @@
             welcomeMessage.style.display = 'none';
             conversationContent.style.display = 'flex';
 
-            db.ref(`tickets/${ticketId}`).once('value', (snapshot) => {
-                const ticketData = snapshot.val();
-                if (ticketData) {
-                    ticketSubjectHeader.textContent = ticketData.subject;
-                    ticketUserIdHeader.textContent = `شناسه کاربر: ${ticketData.telegram_id}`;
-                    ticketStatusSelect.value = ticketData.status;
+            db.ref(`tickets/${ticketId}`).on('value', (snapshot) => {
+                currentOpenTicketData = snapshot.val();
+                if (currentOpenTicketData) {
+                    ticketSubjectHeader.textContent = currentOpenTicketData.subject;
+                    ticketUserIdHeader.textContent = `کاربر: ${currentOpenTicketData.user_name || currentOpenTicketData.telegram_id}`;
+                    ticketStatusSelect.value = currentOpenTicketData.status;
                 }
             });
 
@@ -217,9 +253,9 @@
             messagesRef.on('value', (snapshot) => {
                 const messagesData = snapshot.val();
                 messagesContainer.innerHTML = '';
-                if (messagesData) {
+                if (messagesData && currentOpenTicketData) {
                     const sortedMessages = Object.values(messagesData).sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
-                    sortedMessages.forEach(renderMessage);
+                    sortedMessages.forEach(msg => renderMessage(msg, currentOpenTicketData));
                 }
                 messagesContainer.scrollTop = messagesContainer.scrollHeight;
             });
@@ -227,7 +263,6 @@
 
         // --- Event Listeners ---
 
-        // Send with Enter, new line with Shift+Enter
         replyMessageInput.addEventListener('keydown', (e) => {
             if (e.key === 'Enter' && !e.shiftKey) {
                 e.preventDefault();
@@ -247,7 +282,7 @@
                 created_at: new Date().toISOString()
             });
 
-            if (ticketStatusSelect.value === 'open') {
+            if (ticketStatusSelect.value === 'open' || ticketStatusSelect.value === 'in-progress') {
                 ticketStatusSelect.value = 'answered';
                 db.ref(`tickets/${currentTicketId}`).update({ status: 'answered' });
             }
