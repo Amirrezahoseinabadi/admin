@@ -274,7 +274,12 @@
             if (messagesRef) messagesRef.off();
             if (typingRef) typingRef.off();
             currentTicketId = ticketId;
-            db.ref(`tickets/${ticketId}`).update({ admin_unread: false });
+            
+            // Use a timeout to allow the animation to start before the DB write,
+            // which can cause a re-render and jank on mobile.
+            setTimeout(() => {
+                db.ref(`tickets/${ticketId}`).update({ admin_unread: false });
+            }, 300);
             
             if (window.innerWidth < 768) {
                 conversationView.classList.remove('translate-x-full');
