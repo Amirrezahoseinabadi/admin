@@ -46,7 +46,7 @@
             
             <div id="tickets-view" class="flex flex-col flex-grow">
                 <div class="p-4 border-b">
-                    <input type="text" id="search-box" placeholder="جستجو..." class="w-full p-2 border rounded-md">
+                    <input type="text" id="search-box" placeholder="جستجو بر اساس موضوع، نام یا شناسه کاربر..." class="w-full p-2 border rounded-md">
                     <div class="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2 sm:space-x-reverse mt-2">
                         <select id="filter-status" class="w-full sm:w-1/2 p-2 border rounded-md"><option value="all">همه وضعیت‌ها</option><option value="open">باز</option><option value="in-progress">در حال بررسی</option><option value="answered">پاسخ داده شد</option><option value="closed">بسته شده</option></select>
                         <select id="filter-department" class="w-full sm:w-1/2 p-2 border rounded-md"><option value="all">همه دپارتمان‌ها</option><option value="general">سوالات متفرقه</option><option value="technical">پشتیبانی فنی</option><option value="sales">بخش فروش</option></select>
@@ -117,12 +117,28 @@
 
                 <footer class="p-4 bg-gray-100 border-t">
                     <form id="reply-form" class="flex items-center space-x-2 space-x-reverse">
+                        <button type="button" id="canned-responses-btn" class="p-2 rounded-full hover:bg-gray-200">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h7" /></svg>
+                        </button>
+                        <label id="file-upload-label" for="file-upload" class="p-2 rounded-full hover:bg-gray-200 cursor-pointer">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" /></svg>
+                        </label>
+                        <input type="file" id="file-upload" class="hidden" accept="image/*">
                         <textarea id="reply-message" rows="1" class="flex-grow p-2 border rounded-md focus:ring-2 focus:ring-blue-500 bg-transparent" placeholder="پاسخ خود را بنویسید..."></textarea>
                         <button type="submit" class="bg-blue-600 text-white font-bold py-2 px-6 rounded-md hover:bg-blue-700 transition">ارسال</button>
                     </form>
                 </footer>
             </div>
         </main>
+    </div>
+
+    <!-- Canned Responses Modal -->
+    <div id="canned-responses-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
+        <div class="bg-white rounded-lg shadow-xl p-6 w-full max-w-md">
+            <h3 class="text-lg font-bold mb-4">پاسخ‌های آماده</h3>
+            <div id="canned-list" class="space-y-2 max-h-60 overflow-y-auto"></div>
+            <button id="close-modal-btn" class="mt-4 bg-gray-200 px-4 py-2 rounded-md">بستن</button>
+        </div>
     </div>
     
     <script>
@@ -166,6 +182,7 @@
         const loadingSkeleton = document.getElementById('loading-skeleton');
         const typingIndicator = document.getElementById('typing-indicator');
         const backToListBtn = document.getElementById('back-to-list-btn');
+        const fileUploadInput = document.getElementById('file-upload');
 
         const departmentMap = { general: 'سوالات متفرقه', technical: 'پشتیبانی فنی', sales: 'بخش فروش' };
         const statusMap = {
@@ -174,6 +191,12 @@
             'in-progress': { text: 'در حال بررسی', className: 'status-in-progress' },
             closed: { text: 'بسته شده', className: 'status-closed' }
         };
+        const cannedResponses = [
+            "سلام، از تماس شما با واحد پشتیبانی متشکریم. لطفاً منتظر بمانید.",
+            "مشکل شما در حال بررسی توسط کارشناسان ما است.",
+            "خواهش می‌کنم، اگر سوال دیگری دارید در خدمت شما هستیم.",
+            "آیا مشکل شما برطرف شده است؟"
+        ];
 
         function createSkeleton() {
             return `<div class="p-4 border rounded-lg bg-white animate-pulse"><div class="flex justify-between items-center"><div class="h-4 bg-gray-300 rounded w-3/4"></div><div class="h-4 bg-gray-300 rounded w-1/4"></div></div><div class="h-3 bg-gray-300 rounded w-1/2 mt-2"></div><div class="h-3 bg-gray-300 rounded w-1/3 mt-2"></div></div>`;
@@ -198,9 +221,10 @@
                 const ticket = allTickets[key];
                 const subjectMatch = ticket.subject.toLowerCase().includes(searchTerm);
                 const userNameMatch = (ticket.user_name || '').toLowerCase().includes(searchTerm);
+                const idMatch = (ticket.telegram_id || '').toString().includes(searchTerm);
                 const statusMatch = (status === 'all' || ticket.status === status);
                 const departmentMatch = (department === 'all' || ticket.department === department);
-                return (subjectMatch || userNameMatch) && statusMatch && departmentMatch;
+                return (subjectMatch || userNameMatch || idMatch) && statusMatch && departmentMatch;
             }).reduce((obj, key) => { obj[key] = allTickets[key]; return obj; }, {});
             renderTicketsList(filteredTickets);
         }
@@ -331,6 +355,40 @@
         });
         ticketStatusSelect.addEventListener('change', () => { if (currentTicketId) db.ref(`tickets/${currentTicketId}`).update({ status: ticketStatusSelect.value }); });
         backToListBtn.addEventListener('click', closeConversation);
+        
+        const cannedModal = document.getElementById('canned-responses-modal');
+        const cannedList = document.getElementById('canned-list');
+        cannedResponses.forEach(text => {
+            const btn = document.createElement('button');
+            btn.textContent = text;
+            btn.className = 'w-full text-right p-2 rounded-md hover:bg-gray-100';
+            btn.onclick = () => {
+                replyMessageInput.value += text;
+                cannedModal.classList.add('hidden');
+                replyMessageInput.focus();
+            };
+            cannedList.appendChild(btn);
+        });
+        document.getElementById('canned-responses-btn').onclick = () => cannedModal.classList.remove('hidden');
+        document.getElementById('close-modal-btn').onclick = () => cannedModal.classList.add('hidden');
+
+        fileUploadInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (!file || !currentTicketId) return;
+
+            const filePath = `ticket_attachments/${currentTicketId}/${new Date().getTime()}_${file.name}`;
+            const uploadTask = storage.ref(filePath).put(file);
+
+            uploadTask.on('state_changed', null, 
+                (error) => { console.error("Upload failed:", error); alert('آپلود عکس با خطا مواجه شد.'); }, 
+                () => {
+                    uploadTask.snapshot.ref.getDownloadURL().then((downloadURL) => {
+                        db.ref(`messages/${currentTicketId}`).push({ sender: 'admin', imageUrl: downloadURL, created_at: new Date().toISOString() });
+                    });
+                }
+            );
+            e.target.value = '';
+        });
         
         const navTickets = document.getElementById('nav-tickets');
         const navDashboard = document.getElementById('nav-dashboard');
