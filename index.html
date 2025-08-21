@@ -33,7 +33,7 @@
 </head>
 <body class="h-screen overflow-x-hidden">
 
-    <div class="relative flex h-full">
+    <div class="relative h-full w-full overflow-x-hidden md:flex">
         <!-- Sidebar -->
         <aside id="sidebar" class="w-full md:w-1/3 bg-white border-l border-gray-200 flex flex-col transition-transform duration-300 ease-in-out">
             <header class="p-4 border-b">
@@ -87,7 +87,7 @@
         </aside>
 
         <!-- Main Conversation View -->
-        <main id="conversation-view" class="w-full md:w-2/3 flex flex-col bg-gray-50 absolute top-0 right-0 h-full transform translate-x-full md:relative md:translate-x-0 transition-transform duration-300 ease-in-out">
+        <main id="conversation-view" class="w-full h-full flex flex-col bg-gray-50 absolute top-0 right-0 md:relative md:w-2/3 transform translate-x-full md:translate-x-0 transition-transform duration-300 ease-in-out z-20">
             <div id="welcome-message" class="flex flex-col items-center justify-center h-full text-gray-500">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-24 w-24" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1"><path stroke-linecap="round" stroke-linejoin="round" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" /></svg>
                 <p class="mt-4 text-lg">برای مشاهده گفتگو، یک تیکت را انتخاب کنید.</p>
@@ -273,22 +273,18 @@
         function openConversation(ticketId) {
             if (messagesRef) messagesRef.off();
             if (typingRef) typingRef.off();
-            currentTicketId = ticketId;
-            
-            // Use a timeout to allow the animation to start before the DB write,
-            // which can cause a re-render and jank on mobile.
-            setTimeout(() => {
-                db.ref(`tickets/${ticketId}`).update({ admin_unread: false });
-            }, 300);
             
             if (window.innerWidth < 768) {
                 conversationView.classList.remove('translate-x-full');
-                sidebar.classList.add('-translate-x-full');
             }
+            
+            currentTicketId = ticketId;
+            db.ref(`tickets/${ticketId}`).update({ admin_unread: false });
 
             document.querySelectorAll('.ticket-list-item').forEach(el => el.classList.toggle('active', el.dataset.ticketId === ticketId));
             welcomeMessage.style.display = 'none';
             conversationContent.style.display = 'flex';
+            
             db.ref(`tickets/${ticketId}`).on('value', (snapshot) => {
                 currentOpenTicketData = snapshot.val();
                 if (currentOpenTicketData) {
@@ -315,7 +311,6 @@
         function closeConversation() {
             if (window.innerWidth < 768) {
                 conversationView.classList.add('translate-x-full');
-                sidebar.classList.remove('-translate-x-full');
             }
             currentTicketId = null;
             document.querySelectorAll('.ticket-list-item').forEach(el => el.classList.remove('active'));
