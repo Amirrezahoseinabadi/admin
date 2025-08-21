@@ -11,13 +11,24 @@
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-storage.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;700&display=swap" rel="stylesheet">
     <style>
+        :root {
+            --bg-main: #f3f4f6; --bg-secondary: #ffffff; --bg-tertiary: #eef2ff;
+            --text-primary: #111827; --text-secondary: #6b7280; --border-color: #e5e7eb;
+            --accent-color: #4f46e5;
+        }
+        .dark {
+            --bg-main: #111827; --bg-secondary: #1f2937; --bg-tertiary: #374151;
+            --text-primary: #f9fafb; --text-secondary: #9ca3af; --border-color: #374151;
+            --accent-color: #6366f1;
+        }
         body { 
             font-family: 'Vazirmatn', sans-serif; 
-            background-color: #f3f4f6;
+            background-color: var(--bg-main);
+            color: var(--text-primary);
+            transition: background-color 0.3s, color 0.3s;
         }
-        /* Smaller ticket items */
-        .ticket-list-item {
-            padding: 0.75rem; /* p-3 */
+        .ticket-list-item, aside, main, header, footer, select, textarea, input {
+             transition: background-color 0.3s, color 0.3s, border-color 0.3s;
         }
         .status-badge { padding: 0.25rem 0.75rem; border-radius: 9999px; font-size: 0.7rem; font-weight: 500; }
         .status-open { background-color: #dcfce7; color: #166534; }
@@ -25,92 +36,105 @@
         .status-answered { background-color: #e0e7ff; color: #3730a3; }
         .status-closed { background-color: #fee2e2; color: #991b1b; }
         
-        /* Telegram-like message bubbles - UPDATED */
-        .message-user { background-color: #ffffff; color: #1f2937; border-radius: 1rem 1rem 1rem 0.25rem; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
+        .message-user { background-color: var(--bg-secondary); color: var(--text-primary); border-radius: 1rem 1rem 1rem 0.25rem; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
         .message-admin { background-color: #dbeafe; color: #1e40af; border-radius: 1rem 1rem 0.25rem 1rem; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
-        .sender-name {
-            font-size: 0.8rem;
-            font-weight: 500;
-            margin-bottom: 0.25rem;
-            padding: 0 0.5rem;
-        }
+        .dark .message-admin { background-color: #312e81; color: #e0e7ff; }
+        .sender-name { font-size: 0.8rem; font-weight: 500; margin-bottom: 0.25rem; padding: 0 0.5rem; }
         
         .ticket-list-item.active {
-            background-color: #eef2ff;
-            border-right: 4px solid #4f46e5;
+            background-color: var(--bg-tertiary);
+            border-right: 4px solid var(--accent-color);
         }
-        /* Beautiful chat background */
         #messages-container {
             background-color: #e5ddd5;
             background-image: url('https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png');
         }
-        #file-upload-label {
-            cursor: pointer;
+        .dark #messages-container {
+            background-color: #0d1117;
+            background-image: url('https://i.imgur.com/39mde3z.png'); /* Dark pattern */
         }
-        /* New Unread Indicator */
-        .unread-dot {
-            width: 10px;
-            height: 10px;
-            background-color: #22c55e; /* green-500 */
-            border-radius: 9999px;
-        }
+        #file-upload-label, #canned-responses-btn { cursor: pointer; }
+        .unread-dot { width: 10px; height: 10px; background-color: #22c55e; border-radius: 9999px; }
+        .skeleton { animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: .5; } }
     </style>
 </head>
 <body class="h-screen overflow-hidden">
 
     <div class="flex h-full">
         <!-- Sidebar for Tickets List -->
-        <aside class="w-1/3 bg-white border-l border-gray-200 overflow-y-auto">
-            <header class="p-4 border-b sticky top-0 bg-white z-10">
-                <h1 class="text-xl font-bold text-gray-800">لیست تیکت‌ها</h1>
+        <aside class="w-1/3 bg-white dark:bg-gray-800 border-l border-gray-200 dark:border-gray-700 overflow-y-auto flex flex-col">
+            <header class="p-4 border-b dark:border-gray-700 sticky top-0 bg-white dark:bg-gray-800 z-10">
+                <div class="flex justify-between items-center">
+                    <h1 class="text-xl font-bold">لیست تیکت‌ها</h1>
+                    <button id="dark-mode-toggle" class="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700">
+                        <svg id="theme-toggle-dark-icon" class="w-5 h-5 hidden" fill="currentColor" viewBox="0 0 20 20"><path d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z"></path></svg>
+                        <svg id="theme-toggle-light-icon" class="w-5 h-5 hidden" fill="currentColor" viewBox="0 0 20 20"><path d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm4 8a4 4 0 11-8 0 4 4 0 018 0zm-.464 4.95l.707.707a1 1 0 001.414-1.414l-.707-.707a1 1 0 00-1.414 1.414zm2.12-10.607a1 1 0 010 1.414l-.706.707a1 1 0 11-1.414-1.414l.707-.707a1 1 0 011.414 0zM17 11a1 1 0 100-2h-1a1 1 0 100 2h1zm-7 4a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zM5.05 6.464A1 1 0 106.465 5.05l-.708-.707a1 1 0 00-1.414 1.414l.707.707zm-.707 10.607a1 1 0 011.414 0l.707-.707a1 1 0 111.414 1.414l-.707.707a1 1 0 01-1.414 0zM1 10a1 1 0 011-1h1a1 1 0 110 2H2a1 1 0 01-1-1z"></path></svg>
+                    </button>
+                </div>
+                <div class="mt-4 space-y-2">
+                    <input type="text" id="search-box" placeholder="جستجو..." class="w-full p-2 border dark:border-gray-600 rounded-md bg-transparent">
+                    <div class="flex space-x-2 space-x-reverse">
+                        <select id="filter-status" class="w-1/2 p-2 border dark:border-gray-600 rounded-md bg-transparent"><option value="all">همه وضعیت‌ها</option><option value="open">باز</option><option value="in-progress">در حال بررسی</option><option value="answered">پاسخ داده شد</option><option value="closed">بسته شده</option></select>
+                        <select id="filter-department" class="w-1/2 p-2 border dark:border-gray-600 rounded-md bg-transparent"><option value="all">همه دپارتمان‌ها</option><option value="general">سوالات متفرقه</option><option value="technical">پشتیبانی فنی</option><option value="sales">بخش فروش</option></select>
+                    </div>
+                </div>
             </header>
-            <div id="tickets-list-container" class="space-y-1">
-                <p id="loading-tickets" class="p-4 text-center text-gray-500">در حال بارگذاری تیکت‌ها...</p>
+            <div id="tickets-list-container" class="space-y-1 flex-grow">
+                <!-- Skeleton Loader -->
+                <div id="loading-skeleton" class="p-2 space-y-1"></div>
             </div>
         </aside>
 
         <!-- Main Conversation View -->
-        <main id="conversation-view" class="w-2/3 flex flex-col bg-gray-50">
+        <main id="conversation-view" class="w-2/3 flex flex-col bg-gray-50 dark:bg-gray-900">
             <div id="welcome-message" class="flex flex-col items-center justify-center h-full text-gray-500">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-24 w-24" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1"><path stroke-linecap="round" stroke-linejoin="round" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" /></svg>
                 <p class="mt-4 text-lg">برای مشاهده گفتگو، یک تیکت را انتخاب کنید.</p>
             </div>
             
             <div id="conversation-content" class="hidden flex-1 flex flex-col">
-                <header class="p-3 border-b bg-white z-10 flex justify-between items-center">
+                <header class="p-3 border-b dark:border-gray-700 bg-white dark:bg-gray-800 z-10 flex justify-between items-center">
                     <div>
-                        <h2 id="ticket-subject" class="font-bold text-lg text-gray-900"></h2>
-                        <p id="ticket-user-id" class="text-sm text-gray-500"></p>
+                        <h2 id="ticket-subject" class="font-bold text-lg"></h2>
+                        <p id="ticket-user-id" class="text-sm text-gray-500 dark:text-gray-400"></p>
                     </div>
                     <div class="flex items-center space-x-3 space-x-reverse">
                         <label for="ticket-status" class="font-medium text-sm">وضعیت:</label>
-                        <select id="ticket-status" class="border rounded-md p-2 text-sm">
-                            <option value="open">باز</option>
-                            <option value="in-progress">در حال بررسی</option>
-                            <option value="answered">پاسخ داده شد</option>
-                            <option value="closed">بسته شده</option>
-                        </select>
+                        <select id="ticket-status" class="border dark:border-gray-600 rounded-md p-2 text-sm bg-transparent"><option value="open">باز</option><option value="in-progress">در حال بررسی</option><option value="answered">پاسخ داده شد</option><option value="closed">بسته شده</option></select>
                     </div>
                 </header>
                 
-                <div id="messages-container" class="flex-1 p-4 overflow-y-auto space-y-4">
-                    <!-- Messages will be rendered here -->
-                </div>
+                <div id="messages-container" class="flex-1 p-4 overflow-y-auto space-y-4"></div>
 
-                <footer class="p-4 bg-gray-100 border-t">
+                <footer class="p-4 bg-gray-100 dark:bg-gray-800 border-t dark:border-gray-700">
                     <form id="reply-form" class="flex items-center space-x-2 space-x-reverse">
-                        <label id="file-upload-label" for="file-upload" class="p-2 rounded-full hover:bg-gray-200">
+                        <button type="button" id="canned-responses-btn" class="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h7" /></svg>
+                        </button>
+                        <label id="file-upload-label" for="file-upload" class="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700">
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" /></svg>
                         </label>
                         <input type="file" id="file-upload" class="hidden" accept="image/*">
                         
-                        <textarea id="reply-message" rows="1" class="flex-grow p-2 border rounded-md focus:ring-2 focus:ring-blue-500" placeholder="پاسخ خود را بنویسید..." required></textarea>
+                        <textarea id="reply-message" rows="1" class="flex-grow p-2 border dark:border-gray-600 rounded-md focus:ring-2 focus:ring-blue-500 bg-transparent" placeholder="پاسخ خود را بنویسید..."></textarea>
                         <button type="submit" class="bg-blue-600 text-white font-bold py-2 px-6 rounded-md hover:bg-blue-700 transition">ارسال</button>
                     </form>
                 </footer>
             </div>
         </main>
     </div>
+
+    <!-- Canned Responses Modal -->
+    <div id="canned-responses-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl p-6 w-full max-w-md">
+            <h3 class="text-lg font-bold mb-4">پاسخ‌های آماده</h3>
+            <div id="canned-list" class="space-y-2 max-h-60 overflow-y-auto"></div>
+            <button id="close-modal-btn" class="mt-4 bg-gray-200 dark:bg-gray-600 px-4 py-2 rounded-md">بستن</button>
+        </div>
+    </div>
+    
+    <audio id="notification-sound" src="https://freesound.org/data/previews/415/415762_6142149-lq.mp3" preload="auto"></audio>
 
     <script>
         const firebaseConfig = {
@@ -128,11 +152,12 @@
         const storage = firebase.storage();
 
         let currentTicketId = null;
-        let currentOpenTicketData = null; // Holds data for the open ticket
+        let currentOpenTicketData = null;
         let messagesRef = null;
+        let allTickets = {};
 
+        // DOM Elements
         const ticketsListContainer = document.getElementById('tickets-list-container');
-        const loadingTicketsMsg = document.getElementById('loading-tickets');
         const welcomeMessage = document.getElementById('welcome-message');
         const conversationContent = document.getElementById('conversation-content');
         const ticketSubjectHeader = document.getElementById('ticket-subject');
@@ -142,7 +167,13 @@
         const replyMessageInput = document.getElementById('reply-message');
         const ticketStatusSelect = document.getElementById('ticket-status');
         const fileUploadInput = document.getElementById('file-upload');
+        const searchBox = document.getElementById('search-box');
+        const filterStatus = document.getElementById('filter-status');
+        const filterDepartment = document.getElementById('filter-department');
+        const loadingSkeleton = document.getElementById('loading-skeleton');
+        const notificationSound = document.getElementById('notification-sound');
 
+        // Maps & Data
         const departmentMap = { general: 'سوالات متفرقه', technical: 'پشتیبانی فنی', sales: 'بخش فروش' };
         const statusMap = {
             open: { text: 'باز', className: 'status-open' },
@@ -150,41 +181,91 @@
             'in-progress': { text: 'در حال بررسی', className: 'status-in-progress' },
             closed: { text: 'بسته شده', className: 'status-closed' }
         };
+        const cannedResponses = [
+            "سلام، از تماس شما با واحد پشتیبانی متشکریم. لطفاً منتظر بمانید.",
+            "مشکل شما در حال بررسی توسط کارشناسان ما است.",
+            "خواهش می‌کنم، اگر سوال دیگری دارید در خدمت شما هستیم.",
+            "آیا مشکل شما برطرف شده است؟"
+        ];
+
+        function createSkeleton() {
+            return `
+                <div class="p-3 border-b dark:border-gray-700 animate-pulse">
+                    <div class="flex justify-between items-center">
+                        <div class="h-4 bg-gray-300 dark:bg-gray-600 rounded w-3/4"></div>
+                        <div class="h-4 bg-gray-300 dark:bg-gray-600 rounded w-1/4"></div>
+                    </div>
+                    <div class="h-3 bg-gray-300 dark:bg-gray-600 rounded w-1/2 mt-2"></div>
+                    <div class="h-3 bg-gray-300 dark:bg-gray-600 rounded w-1/3 mt-2"></div>
+                </div>
+            `;
+        }
+
+        function showSkeletonLoader() {
+            let skeletons = '';
+            for (let i = 0; i < 10; i++) {
+                skeletons += createSkeleton();
+            }
+            loadingSkeleton.innerHTML = skeletons;
+            loadingSkeleton.style.display = 'block';
+        }
+
+        function hideSkeletonLoader() {
+            loadingSkeleton.style.display = 'none';
+        }
+
+        function applyFilters() {
+            const searchTerm = searchBox.value.toLowerCase();
+            const status = filterStatus.value;
+            const department = filterDepartment.value;
+
+            const filteredTickets = Object.keys(allTickets).filter(key => {
+                const ticket = allTickets[key];
+                const subjectMatch = ticket.subject.toLowerCase().includes(searchTerm);
+                const statusMatch = (status === 'all' || ticket.status === status);
+                const departmentMatch = (department === 'all' || ticket.department === department);
+                return subjectMatch && statusMatch && departmentMatch;
+            }).reduce((obj, key) => {
+                obj[key] = allTickets[key];
+                return obj;
+            }, {});
+
+            renderTicketsList(filteredTickets);
+        }
 
         function renderTicketsList(tickets) {
-            loadingTicketsMsg.style.display = 'none';
+            hideSkeletonLoader();
             ticketsListContainer.innerHTML = '';
 
             const sortedTickets = Object.keys(tickets).map(key => ({ id: key, ...tickets[key] }))
                 .sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
 
             if (sortedTickets.length === 0) {
-                ticketsListContainer.innerHTML = '<p class="p-4 text-center text-gray-500">هیچ تیکتی یافت نشد.</p>';
+                ticketsListContainer.innerHTML = '<p class="p-4 text-center text-gray-500">هیچ تیکتی با این مشخصات یافت نشد.</p>';
                 return;
             }
             
             sortedTickets.forEach(ticket => {
                 const statusInfo = statusMap[ticket.status] || { text: 'نامشخص', className: 'bg-gray-200 text-gray-800' };
                 const ticketElement = document.createElement('div');
-                ticketElement.className = 'ticket-list-item border-b cursor-pointer hover:bg-gray-100';
+                ticketElement.className = 'ticket-list-item border-b dark:border-gray-700 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700';
                 ticketElement.dataset.ticketId = ticket.id;
-                if (ticket.id === currentTicketId) {
-                    ticketElement.classList.add('active');
-                }
+                if (ticket.id === currentTicketId) ticketElement.classList.add('active');
                 
-                // Add unread dot if admin_unread is true
                 const unreadIndicator = ticket.admin_unread ? '<div class="unread-dot ml-2"></div>' : '';
 
                 ticketElement.innerHTML = `
                     <div class="flex justify-between items-center">
-                        <div class="flex items-center">
-                            ${unreadIndicator}
-                            <p class="font-bold text-gray-800 truncate text-sm">${ticket.subject}</p>
-                        </div>
+                        <div class="flex items-center"><p class="font-bold truncate text-sm">${ticket.subject}</p></div>
                         <span class="status-badge flex-shrink-0">${statusInfo.text}</span>
                     </div>
-                    <p class="text-xs text-gray-500 mt-1">${departmentMap[ticket.department] || 'نامشخص'}</p>
-                    <p class="text-xs text-gray-400 mt-2">${new Date(ticket.created_at).toLocaleString('fa-IR')}</p>
+                    <div class="flex justify-between items-center mt-2">
+                        <p class="text-xs text-gray-500">${departmentMap[ticket.department] || 'نامشخص'}</p>
+                        <div class="flex items-center">
+                             ${unreadIndicator}
+                            <p class="text-xs text-gray-400">${new Date(ticket.created_at).toLocaleString('fa-IR')}</p>
+                        </div>
+                    </div>
                 `;
                 ticketElement.addEventListener('click', () => openConversation(ticket.id));
                 ticketsListContainer.appendChild(ticketElement);
@@ -200,42 +281,29 @@
             const nameAlign = isUser ? 'text-right' : 'text-left';
             const nameColor = isUser ? 'text-green-600' : 'text-blue-600';
 
-            let senderName = '';
-            if (isUser) {
-                senderName = ticketData.user_name || 'کاربر'; // Assumes user_name is saved with the ticket
-            } else {
-                senderName = departmentMap[ticketData.department] || 'پشتیبانی';
-            }
+            let senderName = isUser ? (ticketData.user_name || 'کاربر') : (departmentMap[ticketData.department] || 'پشتیبانی');
 
-            msgElement.className = `flex flex-col max-w-lg w-full ${messageAlign}`;
+            msgElement.className = `flex flex-col max-w-lg w-full ${messageAlign} opacity-0 translate-y-2 transition-all duration-300`;
             
-            let messageContent = '';
-            if (msg.text) {
-                messageContent = `<p class="text-sm">${msg.text.replace(/\n/g, '<br>')}</p>`;
-            } else if (msg.imageUrl) {
-                messageContent = `<a href="${msg.imageUrl}" target="_blank"><img src="${msg.imageUrl}" class="rounded-lg max-w-xs" alt="تصویر ارسال شده"></a>`;
-            }
+            let messageContent = msg.text ? `<p class="text-sm">${msg.text.replace(/\n/g, '<br>')}</p>` : 
+                                 msg.imageUrl ? `<a href="${msg.imageUrl}" target="_blank"><img src="${msg.imageUrl}" class="rounded-lg max-w-xs" alt="تصویر ارسال شده"></a>` : '';
 
             msgElement.innerHTML = `
                 <p class="sender-name ${nameAlign} ${nameColor}">${senderName}</p>
-                <div class="p-3 rounded-lg ${bubbleClass}">
-                    ${messageContent}
-                </div>
-                <span class="text-xs text-gray-500 mt-1 px-1">${new Date(msg.created_at).toLocaleTimeString('fa-IR')}</span>
+                <div class="p-3 rounded-lg ${bubbleClass}">${messageContent}</div>
+                <span class="text-xs text-gray-500 dark:text-gray-400 mt-1 px-1">${new Date(msg.created_at).toLocaleTimeString('fa-IR')}</span>
             `;
             messagesContainer.appendChild(msgElement);
+            setTimeout(() => { msgElement.classList.remove('opacity-0', 'translate-y-2'); }, 10);
         }
 
         function openConversation(ticketId) {
             if (messagesRef) messagesRef.off();
             currentTicketId = ticketId;
             
-            // Mark ticket as read by setting admin_unread to false
             db.ref(`tickets/${ticketId}`).update({ admin_unread: false });
 
-            document.querySelectorAll('.ticket-list-item').forEach(el => {
-                el.classList.toggle('active', el.dataset.ticketId === ticketId);
-            });
+            document.querySelectorAll('.ticket-list-item').forEach(el => el.classList.toggle('active', el.dataset.ticketId === ticketId));
 
             welcomeMessage.style.display = 'none';
             conversationContent.style.display = 'flex';
@@ -262,6 +330,9 @@
         }
 
         // --- Event Listeners ---
+        searchBox.addEventListener('input', applyFilters);
+        filterStatus.addEventListener('change', applyFilters);
+        filterDepartment.addEventListener('change', applyFilters);
 
         replyMessageInput.addEventListener('keydown', (e) => {
             if (e.key === 'Enter' && !e.shiftKey) {
@@ -276,13 +347,8 @@
             const messageText = replyMessageInput.value.trim();
             if (messageText === '') return;
 
-            db.ref(`messages/${currentTicketId}`).push({
-                sender: 'admin',
-                text: messageText,
-                created_at: new Date().toISOString()
-            });
-
-            if (ticketStatusSelect.value === 'open' || ticketStatusSelect.value === 'in-progress') {
+            db.ref(`messages/${currentTicketId}`).push({ sender: 'admin', text: messageText, created_at: new Date().toISOString() });
+            if (['open', 'in-progress'].includes(ticketStatusSelect.value)) {
                 ticketStatusSelect.value = 'answered';
                 db.ref(`tickets/${currentTicketId}`).update({ status: 'answered' });
             }
@@ -297,35 +363,85 @@
         fileUploadInput.addEventListener('change', (e) => {
             const file = e.target.files[0];
             if (!file || !currentTicketId) return;
-
             const filePath = `ticket_attachments/${currentTicketId}/${new Date().getTime()}_${file.name}`;
-            const storageRef = storage.ref(filePath);
-            const uploadTask = storageRef.put(file);
-
-            uploadTask.on('state_changed', 
-                (snapshot) => { /* Can be used for upload progress */ }, 
+            const uploadTask = storage.ref(filePath).put(file);
+            uploadTask.on('state_changed', null, 
                 (error) => { console.error("Upload failed:", error); alert('آپلود عکس با خطا مواجه شد.'); }, 
                 () => {
                     uploadTask.snapshot.ref.getDownloadURL().then((downloadURL) => {
-                        db.ref(`messages/${currentTicketId}`).push({
-                            sender: 'admin',
-                            imageUrl: downloadURL,
-                            created_at: new Date().toISOString()
-                        });
+                        db.ref(`messages/${currentTicketId}`).push({ sender: 'admin', imageUrl: downloadURL, created_at: new Date().toISOString() });
                     });
                 }
             );
-            e.target.value = ''; // Reset file input
+            e.target.value = '';
+        });
+
+        // Canned Responses Logic
+        const cannedModal = document.getElementById('canned-responses-modal');
+        const cannedList = document.getElementById('canned-list');
+        cannedResponses.forEach(text => {
+            const btn = document.createElement('button');
+            btn.textContent = text;
+            btn.className = 'w-full text-right p-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700';
+            btn.onclick = () => {
+                replyMessageInput.value += text;
+                cannedModal.classList.add('hidden');
+                replyMessageInput.focus();
+            };
+            cannedList.appendChild(btn);
+        });
+        document.getElementById('canned-responses-btn').onclick = () => cannedModal.classList.remove('hidden');
+        document.getElementById('close-modal-btn').onclick = () => cannedModal.classList.add('hidden');
+
+        // Dark Mode Logic
+        const darkModeToggle = document.getElementById('dark-mode-toggle');
+        const lightIcon = document.getElementById('theme-toggle-light-icon');
+        const darkIcon = document.getElementById('theme-toggle-dark-icon');
+
+        if (localStorage.getItem('color-theme') === 'dark' || (!('color-theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+            document.body.classList.add('dark');
+            lightIcon.classList.remove('hidden');
+        } else {
+            darkIcon.classList.remove('hidden');
+        }
+
+        darkModeToggle.addEventListener('click', () => {
+            lightIcon.classList.toggle('hidden');
+            darkIcon.classList.toggle('hidden');
+            if (localStorage.getItem('color-theme')) {
+                if (localStorage.getItem('color-theme') === 'light') {
+                    document.body.classList.add('dark');
+                    localStorage.setItem('color-theme', 'dark');
+                } else {
+                    document.body.classList.remove('dark');
+                    localStorage.setItem('color-theme', 'light');
+                }
+            } else {
+                if (document.body.classList.contains('dark')) {
+                    document.body.classList.remove('dark');
+                    localStorage.setItem('color-theme', 'light');
+                } else {
+                    document.body.classList.add('dark');
+                    localStorage.setItem('color-theme', 'dark');
+                }
+            }
         });
 
         // Initial load of tickets
+        showSkeletonLoader();
         db.ref('tickets').on('value', (snapshot) => {
-            const tickets = snapshot.val();
-            if (tickets) {
-                renderTicketsList(tickets);
-            } else {
-                loadingTicketsMsg.textContent = 'هیچ تیکتی یافت نشد.';
+            const newTickets = snapshot.val() || {};
+            // Check for new messages to play notification sound
+            if (Object.keys(allTickets).length > 0) {
+                for (const ticketId in newTickets) {
+                    if (newTickets[ticketId].admin_unread && (!allTickets[ticketId] || !allTickets[ticketId].admin_unread)) {
+                        notificationSound.play().catch(e => console.log("Notification sound blocked by browser."));
+                        break;
+                    }
+                }
             }
+            allTickets = newTickets;
+            applyFilters();
         });
     </script>
 </body>
