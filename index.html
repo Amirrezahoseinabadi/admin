@@ -1,125 +1,244 @@
-<script type="module">
-    const SUPABASE_URL = 'https://zguqvdisadlhvswsnlyy.supabase.co';
-    const SUPABASE_ANON_KEY = 'YOUR_SUPABASE_ANON_KEY';
-    const { createClient } = supabase;
-    const db = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>پنل مدیریت پشتیبانی</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Firebase SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        body { 
+            font-family: 'Vazirmatn', sans-serif; 
+            background-color: #f3f4f6;
+        }
+        .status-badge { padding: 0.25rem 0.75rem; border-radius: 9999px; font-size: 0.75rem; font-weight: 500; }
+        .status-open { background-color: #dcfce7; color: #166534; }
+        .status-in-progress { background-color: #fef3c7; color: #92400e; }
+        .status-answered { background-color: #e0e7ff; color: #3730a3; }
+        .status-closed { background-color: #fee2e2; color: #991b1b; }
+        .message-user { background-color: #e5e7eb; color: #1f2937; border-radius: 1rem 1rem 1rem 0; }
+        .message-admin { background-color: #3b82f6; color: white; border-radius: 1rem 1rem 0 1rem; }
+        .ticket-list-item.active {
+            background-color: #e0e7ff;
+            border-right: 4px solid #4f46e5;
+        }
+    </style>
+</head>
+<body class="h-screen overflow-hidden">
 
-    const ticketsListSection = document.getElementById('tickets-list-section');
-    const conversationSection = document.getElementById('conversation-section');
-    const ticketsListContainer = document.getElementById('tickets-list-container');
-    const noTicketsAdmin = document.getElementById('no-tickets-admin');
-    const noTicketsText = document.getElementById('no-tickets-text');
-    const welcomePanel = document.getElementById('welcome-panel');
-    const conversationPanel = document.getElementById('conversation-panel');
-    const conversationSubject = document.getElementById('conversation-subject');
-    const conversationUserId = document.getElementById('conversation-user-id');
-    const statusChanger = document.getElementById('status-changer');
-    const conversationContainer = document.getElementById('conversation-container');
-    const adminReplyForm = document.getElementById('admin-reply-form');
-    const backToListBtn = document.getElementById('back-to-list-btn');
-    
-    // Fetch and Render Tickets
-    async function fetchAndRenderAllTickets() {
-        const { data: tickets, error } = await db.from('tickets').select('*, messages(*)');
-        if (error) {
-            console.error("Error fetching tickets: ", error);
-            noTicketsText.textContent = 'خطا در بارگذاری تیکت‌ها.';
-            return;
-        }
-        noTicketsAdmin.style.display = tickets.length === 0 ? 'flex' : 'none';
-        if (tickets.length === 0) {
-            noTicketsText.textContent = 'هیچ تیکتی یافت نشد.';
-        }
-        const ticketsWithUnread = tickets.map(ticket => {
-            const lastAdminMessage = [...ticket.messages].filter(m => m.sender === 'admin').pop();
-            let unreadCount = 0;
-            if (lastAdminMessage) {
-                unreadCount = ticket.messages.filter(m => m.sender === 'user' && new Date(m.created_at) > new Date(lastAdminMessage.created_at)).length;
-            } else {
-                unreadCount = ticket.messages.filter(m => m.sender === 'user').length;
-            }
-            return { ...ticket, unreadCount };
-        });
-        const sortedTickets = ticketsWithUnread.sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at));
-        ticketsListContainer.innerHTML = sortedTickets.map(ticket => renderTicketListItem(ticket)).join('');
-        
-        document.querySelectorAll('.ticket-list-item').forEach(item => {
-            item.addEventListener('click', () => {
-                document.querySelectorAll('.ticket-list-item').forEach(i => i.classList.remove('active'));
-                item.classList.add('active');
-                openConversation(item.dataset.id);
-            });
-        });
-    }
-    
-    // Render ticket list item
-    function renderTicketListItem(data) {
-        const status = statusMap[data.status] || { text: 'نامشخص', className: 'status-closed' };
-        const lastUpdate = new Date(data.updated_at).toLocaleTimeString('fa-IR', {hour: '2-digit', minute:'2-digit'});
-        return `<div class="ticket-list-item p-4 border-b border-gray-700 cursor-pointer hover:bg-gray-700 ${data.id === currentTicketId ? 'active' : ''}" data-id="${data.id}">
-                    <div class="flex justify-between items-center">
-                        <p class="font-bold text-sm text-gray-100 truncate">${data.subject}</p>
-                        <div class="flex items-center space-x-2 space-x-reverse">
-                            <span class="status-badge flex-shrink-0">${status.text}</span>
-                            ${data.unreadCount > 0 ? `<div class="unread-badge">${data.unreadCount}</div>` : ''}
+    <div class="flex h-full">
+        <!-- Sidebar for Tickets List -->
+        <aside class="w-1/3 bg-white border-l border-gray-200 overflow-y-auto">
+            <header class="p-4 border-b sticky top-0 bg-white z-10">
+                <h1 class="text-xl font-bold text-gray-800">لیست تیکت‌ها</h1>
+            </header>
+            <div id="tickets-list-container" class="p-2 space-y-2">
+                <!-- Tickets will be rendered here by JavaScript -->
+                <p id="loading-tickets" class="p-4 text-center text-gray-500">در حال بارگذاری تیکت‌ها...</p>
+            </div>
+        </aside>
+
+        <!-- Main Conversation View -->
+        <main id="conversation-view" class="w-2/3 flex flex-col bg-gray-50">
+            <div id="welcome-message" class="flex flex-col items-center justify-center h-full text-gray-500">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-24 w-24" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1"><path stroke-linecap="round" stroke-linejoin="round" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" /></svg>
+                <p class="mt-4 text-lg">برای مشاهده گفتگو، یک تیکت را انتخاب کنید.</p>
+            </div>
+            
+            <div id="conversation-content" class="hidden flex-1 flex flex-col">
+                <header class="p-4 border-b bg-white z-10">
+                    <h2 id="ticket-subject" class="font-bold text-lg text-gray-900"></h2>
+                    <p id="ticket-user-id" class="text-sm text-gray-500"></p>
+                </header>
+                
+                <div id="messages-container" class="flex-1 p-4 overflow-y-auto space-y-4">
+                    <!-- Messages will be rendered here -->
+                </div>
+
+                <footer class="p-4 bg-white border-t">
+                    <form id="reply-form" class="space-y-3">
+                        <div>
+                            <textarea id="reply-message" rows="3" class="w-full p-2 border rounded-md focus:ring-2 focus:ring-blue-500" placeholder="پاسخ خود را بنویسید..." required></textarea>
                         </div>
-                    </div>
-                    <div class="flex justify-between items-baseline text-xs text-gray-400 mt-2">
-                        <p>کاربر (${data.telegram_id || 'ناشناس'})</p>
-                        <p>${lastUpdate}</p>
-                    </div>
-                </div>`;
-    }
-    
-    // Open conversation when a ticket is selected
-    async function openConversation(ticketId) {
-        currentTicketId = ticketId;
-        welcomePanel.style.display = 'none';
-        conversationPanel.classList.remove('hidden');
-        conversationPanel.classList.add('flex');
-        
-        if (window.innerWidth < 768) {
-            ticketsListSection.style.display = 'none';
-            conversationSection.style.display = 'flex';
-        }
-        
-        if (messagesSubscription) messagesSubscription.unsubscribe();
-        
-        const { data: ticketData, error } = await db.from('tickets').select().eq('id', ticketId).single();
-        if (error) return console.error(error);
+                        <div class="flex justify-between items-center">
+                            <div class="flex items-center space-x-3 space-x-reverse">
+                                <label for="ticket-status" class="font-medium">تغییر وضعیت:</label>
+                                <select id="ticket-status" class="border rounded-md p-2">
+                                    <option value="open">باز</option>
+                                    <option value="in-progress">در حال بررسی</option>
+                                    <option value="answered">پاسخ داده شد</option>
+                                    <option value="closed">بسته شده</option>
+                                </select>
+                            </div>
+                            <button type="submit" class="bg-blue-600 text-white font-bold py-2 px-6 rounded-md hover:bg-blue-700 transition">ارسال پاسخ</button>
+                        </div>
+                    </form>
+                </footer>
+            </div>
+        </main>
+    </div>
 
-        conversationSubject.textContent = ticketData.subject;
-        conversationUserId.textContent = `کاربر (${ticketData.telegram_id || 'ناشناس'})`;
-        statusChanger.value = ticketData.status;
-
-        const renderMessages = (messages) => {
-            const sortedMessages = messages.sort((a,b) => new Date(a.created_at) - new Date(b.created_at));
-            conversationContainer.innerHTML = sortedMessages.map(msg => renderMessage(msg)).join('');
-            conversationContainer.scrollTop = conversationContainer.scrollHeight;
+    <script>
+        // اطلاعات اتصال Firebase (این اطلاعات باید با پروژه شما یکسان باشد)
+        const firebaseConfig = {
+            apiKey: "AIzaSyAjBkdCe-kJK2VFfM3lSFyFiFNXElOCPSg",
+            authDomain: "support-app-final.firebaseapp.com",
+            databaseURL: "https://support-app-final-default-rtdb.asia-southeast1.firebasedatabase.app",
+            projectId: "support-app-final",
+            storageBucket: "support-app-final.appspot.com",
+            messagingSenderId: "220983533006",
+            appId: "1:220983533006:web:87f404486afb9f6a06df9f"
         };
 
-        messagesSubscription = db
-            .channel(`public:messages:ticket_id=eq.${ticketId}`)
-            .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages', filter: `ticket_id=eq.${ticketId}` }, async payload => {
-                 const { data, error } = await db.from('messages').select().eq('ticket_id', ticketId);
-                 if (data) renderMessages(data);
-            })
-            .subscribe();
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
 
-        const { data: initialMessages, error: msgError } = await db.from('messages').select().eq('ticket_id', ticketId);
-        if (msgError) console.error(msgError);
-        else renderMessages(initialMessages);
-    }
+        let currentTicketId = null;
+        let messagesRef = null;
 
-    // Render message
-    function renderMessage(data) {
-        const messageClass = data.sender === 'user' ? 'message-user' : 'message-admin';
-        const time = new Date(data.created_at).toLocaleTimeString('fa-IR', { hour: '2-digit', minute: '2-digit'});
-        return `<div class="p-3 rounded-lg max-w-lg ${messageClass}">
-                    <p class="whitespace-pre-wrap text-sm">${data.text}</p>
-                    <span class="text-xs mt-2 block text-right opacity-70">${time}</span>
-                </div>`;
-    }
+        const ticketsListContainer = document.getElementById('tickets-list-container');
+        const loadingTicketsMsg = document.getElementById('loading-tickets');
+        const welcomeMessage = document.getElementById('welcome-message');
+        const conversationContent = document.getElementById('conversation-content');
+        const ticketSubjectHeader = document.getElementById('ticket-subject');
+        const ticketUserIdHeader = document.getElementById('ticket-user-id');
+        const messagesContainer = document.getElementById('messages-container');
+        const replyForm = document.getElementById('reply-form');
+        const replyMessageInput = document.getElementById('reply-message');
+        const ticketStatusSelect = document.getElementById('ticket-status');
 
-    fetchAndRenderAllTickets();
-</script>
+        const departmentMap = { general: 'سوالات متفرقه', technical: 'پشتیبانی فنی', sales: 'بخش فروش' };
+        const statusMap = {
+            open: { text: 'باز', className: 'status-open' },
+            answered: { text: 'پاسخ داده شد', className: 'status-answered' },
+            'in-progress': { text: 'در حال بررسی', className: 'status-in-progress' },
+            closed: { text: 'بسته شده', className: 'status-closed' }
+        };
+
+        function renderTicketsList(tickets) {
+            loadingTicketsMsg.style.display = 'none';
+            ticketsListContainer.innerHTML = ''; // Clear previous list
+
+            const sortedTickets = Object.keys(tickets).map(key => ({ id: key, ...tickets[key] }))
+                .sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+
+            if (sortedTickets.length === 0) {
+                ticketsListContainer.innerHTML = '<p class="p-4 text-center text-gray-500">هیچ تیکتی یافت نشد.</p>';
+                return;
+            }
+            
+            sortedTickets.forEach(ticket => {
+                const statusInfo = statusMap[ticket.status] || { text: 'نامشخص', className: 'bg-gray-200 text-gray-800' };
+                const ticketElement = document.createElement('div');
+                ticketElement.className = 'ticket-list-item p-4 border-b cursor-pointer hover:bg-gray-100';
+                ticketElement.dataset.ticketId = ticket.id;
+                if (ticket.id === currentTicketId) {
+                    ticketElement.classList.add('active');
+                }
+
+                ticketElement.innerHTML = `
+                    <div class="flex justify-between items-start">
+                        <p class="font-bold text-gray-800 truncate">${ticket.subject}</p>
+                        <span class="status-badge flex-shrink-0 ${statusInfo.className}">${statusInfo.text}</span>
+                    </div>
+                    <p class="text-sm text-gray-600 mt-1">دپارتمان: ${departmentMap[ticket.department] || 'نامشخص'}</p>
+                    <p class="text-xs text-gray-400 mt-2">${new Date(ticket.created_at).toLocaleString('fa-IR')}</p>
+                `;
+                ticketElement.addEventListener('click', () => openConversation(ticket.id));
+                ticketsListContainer.appendChild(ticketElement);
+            });
+        }
+
+        function openConversation(ticketId) {
+            if (messagesRef) {
+                messagesRef.off(); // Detach previous message listener
+            }
+            currentTicketId = ticketId;
+
+            // Highlight the active ticket in the list
+            document.querySelectorAll('.ticket-list-item').forEach(el => {
+                el.classList.toggle('active', el.dataset.ticketId === ticketId);
+            });
+
+            welcomeMessage.style.display = 'none';
+            conversationContent.style.display = 'flex';
+
+            const ticketRef = db.ref(`tickets/${ticketId}`);
+            ticketRef.once('value', (snapshot) => {
+                const ticketData = snapshot.val();
+                if (ticketData) {
+                    ticketSubjectHeader.textContent = ticketData.subject;
+                    ticketUserIdHeader.textContent = `شناسه کاربر: ${ticketData.telegram_id}`;
+                    ticketStatusSelect.value = ticketData.status;
+                }
+            });
+
+            messagesRef = db.ref(`messages/${ticketId}`);
+            messagesRef.on('value', (snapshot) => {
+                const messagesData = snapshot.val();
+                messagesContainer.innerHTML = '';
+                if (messagesData) {
+                    const sortedMessages = Object.values(messagesData).sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+                    sortedMessages.forEach(msg => {
+                        const msgElement = document.createElement('div');
+                        const messageClass = msg.sender === 'user' ? 'message-user self-start' : 'message-admin self-end';
+                        msgElement.className = `flex flex-col max-w-lg ${msg.sender === 'user' ? 'items-start' : 'items-end'} w-full`;
+                        msgElement.innerHTML = `
+                            <div class="p-3 rounded-lg ${messageClass}">
+                                <p class="text-sm">${msg.text}</p>
+                            </div>
+                            <span class="text-xs text-gray-400 mt-1 px-1">${new Date(msg.created_at).toLocaleTimeString('fa-IR')}</span>
+                        `;
+                        messagesContainer.appendChild(msgElement);
+                    });
+                }
+                messagesContainer.scrollTop = messagesContainer.scrollHeight;
+            });
+        }
+
+        replyForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            if (!currentTicketId) return;
+
+            const messageText = replyMessageInput.value.trim();
+            const newStatus = ticketStatusSelect.value;
+
+            if (messageText === '') {
+                alert('لطفا متن پاسخ را وارد کنید.');
+                return;
+            }
+
+            // 1. Add new message from admin
+            const messagesPath = db.ref(`messages/${currentTicketId}`);
+            messagesPath.push({
+                sender: 'admin',
+                text: messageText,
+                created_at: new Date().toISOString()
+            });
+
+            // 2. Update ticket status
+            const ticketPath = db.ref(`tickets/${currentTicketId}`);
+            ticketPath.update({
+                status: newStatus
+            });
+
+            replyMessageInput.value = ''; // Clear input after sending
+        });
+
+        // Initial load of tickets
+        const ticketsRef = db.ref('tickets');
+        ticketsRef.on('value', (snapshot) => {
+            const tickets = snapshot.val();
+            if (tickets) {
+                renderTicketsList(tickets);
+            } else {
+                loadingTicketsMsg.textContent = 'هیچ تیکتی یافت نشد.';
+            }
+        });
+    </script>
+</body>
+</html>
