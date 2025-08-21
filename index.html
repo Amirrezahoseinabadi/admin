@@ -35,7 +35,7 @@
 
     <div class="flex h-full">
         <!-- Sidebar -->
-        <aside class="w-1/3 bg-white border-l border-gray-200 flex flex-col">
+        <aside id="sidebar" class="w-full md:w-1/3 bg-white border-l border-gray-200 flex flex-col transition-all duration-300">
             <header class="p-4 border-b">
                 <h1 class="text-xl font-bold">پنل مدیریت</h1>
                 <nav class="mt-4 flex border-b">
@@ -47,9 +47,9 @@
             <div id="tickets-view" class="flex flex-col flex-grow">
                 <div class="p-4 border-b">
                     <input type="text" id="search-box" placeholder="جستجو..." class="w-full p-2 border rounded-md">
-                    <div class="flex space-x-2 space-x-reverse mt-2">
-                        <select id="filter-status" class="w-1/2 p-2 border rounded-md"><option value="all">همه وضعیت‌ها</option><option value="open">باز</option><option value="in-progress">در حال بررسی</option><option value="answered">پاسخ داده شد</option><option value="closed">بسته شده</option></select>
-                        <select id="filter-department" class="w-1/2 p-2 border rounded-md"><option value="all">همه دپارتمان‌ها</option><option value="general">سوالات متفرقه</option><option value="technical">پشتیبانی فنی</option><option value="sales">بخش فروش</option></select>
+                    <div class="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2 sm:space-x-reverse mt-2">
+                        <select id="filter-status" class="w-full sm:w-1/2 p-2 border rounded-md"><option value="all">همه وضعیت‌ها</option><option value="open">باز</option><option value="in-progress">در حال بررسی</option><option value="answered">پاسخ داده شد</option><option value="closed">بسته شده</option></select>
+                        <select id="filter-department" class="w-full sm:w-1/2 p-2 border rounded-md"><option value="all">همه دپارتمان‌ها</option><option value="general">سوالات متفرقه</option><option value="technical">پشتیبانی فنی</option><option value="sales">بخش فروش</option></select>
                     </div>
                 </div>
                 <div id="tickets-list-container" class="p-2 space-y-2 flex-grow overflow-y-auto">
@@ -60,66 +60,34 @@
             <div id="dashboard-view" class="p-6 overflow-y-auto hidden bg-gray-50">
                 <h2 class="text-xl font-bold mb-6 text-gray-800">داشبورد عملکرد پشتیبانی</h2>
                 
-                <!-- Stats Cards -->
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-8">
-                    <!-- Total Tickets -->
                     <div class="bg-white p-3 rounded-xl shadow-sm flex items-center">
-                        <div class="bg-blue-100 text-blue-600 p-2 rounded-full">
-                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path></svg>
-                        </div>
-                        <div class="mr-3">
-                            <p class="text-gray-500 text-sm">کل تیکت‌ها</p>
-                            <p class="text-xl font-bold text-gray-900" id="stats-total"></p>
-                        </div>
+                        <div class="bg-blue-100 text-blue-600 p-2 rounded-full"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path></svg></div>
+                        <div class="mr-3"><p class="text-gray-500 text-sm">کل تیکت‌ها</p><p class="text-xl font-bold text-gray-900" id="stats-total"></p></div>
                     </div>
-                    <!-- Open Tickets -->
                     <div class="bg-white p-3 rounded-xl shadow-sm flex items-center">
-                        <div class="bg-green-100 text-green-600 p-2 rounded-full">
-                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-                        </div>
-                        <div class="mr-3">
-                            <p class="text-gray-500 text-sm">تیکت‌های باز</p>
-                            <p class="text-xl font-bold text-gray-900" id="stats-open"></p>
-                        </div>
+                        <div class="bg-green-100 text-green-600 p-2 rounded-full"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg></div>
+                        <div class="mr-3"><p class="text-gray-500 text-sm">تیکت‌های باز</p><p class="text-xl font-bold text-gray-900" id="stats-open"></p></div>
                     </div>
-                    <!-- Closed Tickets -->
                     <div class="bg-white p-3 rounded-xl shadow-sm flex items-center">
-                        <div class="bg-red-100 text-red-600 p-2 rounded-full">
-                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-                        </div>
-                        <div class="mr-3">
-                            <p class="text-gray-500 text-sm">تیکت‌های بسته</p>
-                            <p class="text-xl font-bold text-gray-900" id="stats-closed"></p>
-                        </div>
+                        <div class="bg-red-100 text-red-600 p-2 rounded-full"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg></div>
+                        <div class="mr-3"><p class="text-gray-500 text-sm">تیکت‌های بسته</p><p class="text-xl font-bold text-gray-900" id="stats-closed"></p></div>
                     </div>
-                    <!-- Average Rating -->
                     <div class="bg-white p-3 rounded-xl shadow-sm flex items-center">
-                        <div class="bg-yellow-100 text-yellow-600 p-2 rounded-full">
-                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.196-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.783-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"></path></svg>
-                        </div>
-                        <div class="mr-3">
-                            <p class="text-gray-500 text-sm">میانگین رضایت</p>
-                            <p class="text-xl font-bold text-gray-900" id="stats-rating"></p>
-                        </div>
+                        <div class="bg-yellow-100 text-yellow-600 p-2 rounded-full"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.196-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.783-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"></path></svg></div>
+                        <div class="mr-3"><p class="text-gray-500 text-sm">میانگین رضایت</p><p class="text-xl font-bold text-gray-900" id="stats-rating"></p></div>
                     </div>
                 </div>
                 
-                <!-- Charts -->
                 <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                    <div class="bg-white p-4 rounded-xl shadow-sm">
-                        <h3 class="font-semibold mb-4 text-gray-700">تفکیک وضعیت تیکت‌ها</h3>
-                        <canvas id="status-chart"></canvas>
-                    </div>
-                    <div class="bg-white p-4 rounded-xl shadow-sm">
-                        <h3 class="font-semibold mb-4 text-gray-700">تفکیک دپارتمان‌ها</h3>
-                        <canvas id="department-chart"></canvas>
-                    </div>
+                    <div class="bg-white p-4 rounded-xl shadow-sm"><h3 class="font-semibold mb-4 text-gray-700">تفکیک وضعیت تیکت‌ها</h3><canvas id="status-chart"></canvas></div>
+                    <div class="bg-white p-4 rounded-xl shadow-sm"><h3 class="font-semibold mb-4 text-gray-700">تفکیک دپارتمان‌ها</h3><canvas id="department-chart"></canvas></div>
                 </div>
             </div>
         </aside>
 
         <!-- Main Conversation View -->
-        <main id="conversation-view" class="w-2/3 flex flex-col bg-gray-50">
+        <main id="conversation-view" class="w-full md:w-2/3 flex flex-col bg-gray-50 absolute md:static top-0 left-0 h-full transform translate-x-full md:translate-x-0 transition-transform duration-300 ease-in-out">
             <div id="welcome-message" class="flex flex-col items-center justify-center h-full text-gray-500">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-24 w-24" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1"><path stroke-linecap="round" stroke-linejoin="round" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" /></svg>
                 <p class="mt-4 text-lg">برای مشاهده گفتگو، یک تیکت را انتخاب کنید.</p>
@@ -127,11 +95,16 @@
             
             <div id="conversation-content" class="hidden flex-1 flex flex-col">
                 <header class="p-3 border-b bg-white z-10 flex justify-between items-center">
-                    <div>
-                        <h2 id="ticket-subject" class="font-bold text-lg"></h2>
-                        <div class="flex items-center">
-                            <p id="ticket-user-id" class="text-sm text-gray-500"></p>
-                            <div id="typing-indicator" class="typing-indicator hidden ml-2"><span></span><span></span><span></span></div>
+                    <div class="flex items-center">
+                        <button id="back-to-list-btn" class="md:hidden ml-2 p-2 rounded-full hover:bg-gray-100">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"></path></svg>
+                        </button>
+                        <div>
+                            <h2 id="ticket-subject" class="font-bold text-lg"></h2>
+                            <div class="flex items-center">
+                                <p id="ticket-user-id" class="text-sm text-gray-500"></p>
+                                <div id="typing-indicator" class="typing-indicator hidden ml-2"><span></span><span></span><span></span></div>
+                            </div>
                         </div>
                     </div>
                     <div class="flex items-center space-x-3 space-x-reverse">
@@ -176,8 +149,10 @@
         let departmentChartInstance = null;
 
         // DOM Elements
+        const sidebar = document.getElementById('sidebar');
         const ticketsListContainer = document.getElementById('tickets-list-container');
         const welcomeMessage = document.getElementById('welcome-message');
+        const conversationView = document.getElementById('conversation-view');
         const conversationContent = document.getElementById('conversation-content');
         const ticketSubjectHeader = document.getElementById('ticket-subject');
         const ticketUserIdHeader = document.getElementById('ticket-user-id');
@@ -190,6 +165,7 @@
         const filterDepartment = document.getElementById('filter-department');
         const loadingSkeleton = document.getElementById('loading-skeleton');
         const typingIndicator = document.getElementById('typing-indicator');
+        const backToListBtn = document.getElementById('back-to-list-btn');
 
         const departmentMap = { general: 'سوالات متفرقه', technical: 'پشتیبانی فنی', sales: 'بخش فروش' };
         const statusMap = {
@@ -200,11 +176,7 @@
         };
 
         function createSkeleton() {
-            return `
-                <div class="p-4 border rounded-lg bg-white animate-pulse">
-                    <div class="flex justify-between items-center"><div class="h-4 bg-gray-300 rounded w-3/4"></div><div class="h-4 bg-gray-300 rounded w-1/4"></div></div>
-                    <div class="h-3 bg-gray-300 rounded w-1/2 mt-2"></div><div class="h-3 bg-gray-300 rounded w-1/3 mt-2"></div>
-                </div>`;
+            return `<div class="p-4 border rounded-lg bg-white animate-pulse"><div class="flex justify-between items-center"><div class="h-4 bg-gray-300 rounded w-3/4"></div><div class="h-4 bg-gray-300 rounded w-1/4"></div></div><div class="h-3 bg-gray-300 rounded w-1/2 mt-2"></div><div class="h-3 bg-gray-300 rounded w-1/3 mt-2"></div></div>`;
         }
 
         function showSkeletonLoader() {
@@ -248,9 +220,7 @@
                 ticketElement.dataset.ticketId = ticket.id;
                 if (ticket.id === currentTicketId) ticketElement.classList.add('active');
                 const unreadIndicator = ticket.admin_unread ? '<div class="unread-dot ml-2"></div>' : '';
-                ticketElement.innerHTML = `
-                    <div class="flex justify-between items-center"><p class="font-bold truncate text-sm">${ticket.subject} <span class="font-normal text-gray-500">- ${ticket.user_name || 'کاربر'}</span></p><span class="status-badge flex-shrink-0 ${statusInfo.className}">${statusInfo.text}</span></div>
-                    <div class="flex justify-between items-center mt-2"><p class="text-xs text-gray-500">${departmentMap[ticket.department] || 'نامشخص'}</p><div class="flex items-center">${unreadIndicator}<p class="text-xs text-gray-400">${new Date(ticket.created_at).toLocaleString('fa-IR')}</p></div></div>`;
+                ticketElement.innerHTML = `<div class="flex justify-between items-center"><p class="font-bold truncate text-sm">${ticket.subject} <span class="font-normal text-gray-500">- ${ticket.user_name || 'کاربر'}</span></p><span class="status-badge flex-shrink-0 ${statusInfo.className}">${statusInfo.text}</span></div><div class="flex justify-between items-center mt-2"><p class="text-xs text-gray-500">${departmentMap[ticket.department] || 'نامشخص'}</p><div class="flex items-center">${unreadIndicator}<p class="text-xs text-gray-400">${new Date(ticket.created_at).toLocaleString('fa-IR')}</p></div></div>`;
                 ticketElement.addEventListener('click', () => openConversation(ticket.id));
                 ticketsListContainer.appendChild(ticketElement);
             });
@@ -272,9 +242,7 @@
                 const checkCount = msg.read_by_user ? '✓✓' : '✓';
                 receipt = `<span class="text-xs ${checkColor} mr-1">${checkCount}</span>`;
             }
-            msgElement.innerHTML = `
-                <p class="sender-name ${nameAlign} ${nameColor}">${senderName}</p><div class="p-3 rounded-lg ${bubbleClass}">${messageContent}</div>
-                <span class="text-xs text-gray-500 mt-1 px-1">${receipt}${new Date(msg.created_at).toLocaleTimeString('fa-IR')}</span>`;
+            msgElement.innerHTML = `<p class="sender-name ${nameAlign} ${nameColor}">${senderName}</p><div class="p-3 rounded-lg ${bubbleClass}">${messageContent}</div><span class="text-xs text-gray-500 mt-1 px-1">${receipt}${new Date(msg.created_at).toLocaleTimeString('fa-IR')}</span>`;
             messagesContainer.appendChild(msgElement);
         }
 
@@ -283,6 +251,11 @@
             if (typingRef) typingRef.off();
             currentTicketId = ticketId;
             db.ref(`tickets/${ticketId}`).update({ admin_unread: false });
+            
+            if (window.innerWidth < 768) {
+                conversationView.classList.remove('translate-x-full');
+            }
+
             document.querySelectorAll('.ticket-list-item').forEach(el => el.classList.toggle('active', el.dataset.ticketId === ticketId));
             welcomeMessage.style.display = 'none';
             conversationContent.style.display = 'flex';
@@ -307,6 +280,12 @@
             typingRef.on('value', (snapshot) => {
                 typingIndicator.classList.toggle('hidden', !snapshot.val());
             });
+        }
+
+        function closeConversation() {
+            conversationView.classList.add('translate-x-full');
+            currentTicketId = null;
+            document.querySelectorAll('.ticket-list-item').forEach(el => el.classList.remove('active'));
         }
 
         function renderDashboard() {
@@ -347,6 +326,7 @@
             replyMessageInput.value = '';
         });
         ticketStatusSelect.addEventListener('change', () => { if (currentTicketId) db.ref(`tickets/${currentTicketId}`).update({ status: ticketStatusSelect.value }); });
+        backToListBtn.addEventListener('click', closeConversation);
         
         const navTickets = document.getElementById('nav-tickets');
         const navDashboard = document.getElementById('nav-dashboard');
