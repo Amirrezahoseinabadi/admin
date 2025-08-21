@@ -142,6 +142,8 @@
     </div>
     
     <script>
+        // +++ START: CONFIGURATION +++
+        const WORKER_URL = "https://support-api-worker.amiruserbot7.workers.dev"; // آدرس ورکر شما
         const firebaseConfig = {
             apiKey: "AIzaSyAjBkdCe-kJK2VFfM3lSFyFiFNXElOCPSg",
             authDomain: "support-app-final.firebaseapp.com",
@@ -151,6 +153,7 @@
             messagingSenderId: "220983533006",
             appId: "1:220983533006:web:87f404486afb9f6a06df9f"
         };
+        // +++ END: CONFIGURATION +++
 
         firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
@@ -341,18 +344,48 @@
         filterStatus.addEventListener('change', applyFilters);
         filterDepartment.addEventListener('change', applyFilters);
         replyMessageInput.addEventListener('keydown', (e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); replyForm.dispatchEvent(new Event('submit')); } });
-        replyForm.addEventListener('submit', (e) => {
+        
+        // +++ START: EDITED CODE +++
+        // این بخش برای ارسال پیام از طریق ورکر اصلاح شده است
+        replyForm.addEventListener('submit', async (e) => {
             e.preventDefault();
             if (!currentTicketId) return;
             const messageText = replyMessageInput.value.trim();
             if (messageText === '') return;
-            db.ref(`messages/${currentTicketId}`).push({ sender: 'admin', text: messageText, created_at: new Date().toISOString() });
-            if (['open', 'in-progress'].includes(ticketStatusSelect.value)) {
-                ticketStatusSelect.value = 'answered';
-                db.ref(`tickets/${currentTicketId}`).update({ status: 'answered' });
+
+            // ساختن بدنه درخواست برای ارسال به ورکر
+            const payload = {
+                ticket_id: currentTicketId,
+                sender: 'admin', // مهم: این فیلد مشخص می‌کند که پیام از طرف ادمین است
+                text: messageText,
+            };
+
+            try {
+                // ارسال درخواست به ورکر برای ثبت پیام
+                const response = await fetch(`${WORKER_URL}/messages`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload),
+                });
+
+                if (!response.ok) {
+                    throw new Error('خطا در ارسال پیام به سرور');
+                }
+                
+                // پس از ارسال موفق، وضعیت تیکت را در دیتابیس آپدیت می‌کنیم
+                if (['open', 'in-progress'].includes(ticketStatusSelect.value)) {
+                    ticketStatusSelect.value = 'answered';
+                    db.ref(`tickets/${currentTicketId}`).update({ status: 'answered' });
+                }
+                replyMessageInput.value = '';
+
+            } catch (error) {
+                console.error("Failed to send message:", error);
+                alert('ارسال پیام با خطا مواجه شد.');
             }
-            replyMessageInput.value = '';
         });
+        // +++ END: EDITED CODE +++
+
         ticketStatusSelect.addEventListener('change', () => { if (currentTicketId) db.ref(`tickets/${currentTicketId}`).update({ status: ticketStatusSelect.value }); });
         backToListBtn.addEventListener('click', closeConversation);
         
@@ -383,7 +416,17 @@
                 (error) => { console.error("Upload failed:", error); alert('آپلود عکس با خطا مواجه شد.'); }, 
                 () => {
                     uploadTask.snapshot.ref.getDownloadURL().then((downloadURL) => {
-                        db.ref(`messages/${currentTicketId}`).push({ sender: 'admin', imageUrl: downloadURL, created_at: new Date().toISOString() });
+                        // به جای ذخیره مستقیم، به ورکر ارسال می‌کنیم
+                         fetch(`${WORKER_URL}/messages`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                ticket_id: currentTicketId,
+                                sender: 'admin',
+                                text: `[فایل ضمیمه شده](${downloadURL})`, // ارسال لینک به عنوان پیام
+                                imageUrl: downloadURL // همچنین می‌توان فیلد جداگانه در نظر گرفت
+                            }),
+                        });
                     });
                 }
             );
