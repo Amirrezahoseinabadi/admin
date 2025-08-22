@@ -67,6 +67,21 @@
 
             <div id="dashboard-view" class="p-6 overflow-y-auto hidden bg-gray-50">
                  <!-- Dashboard content remains the same -->
+                 <h2 class="text-xl font-bold mb-6 text-gray-800">داشبورد عملکرد پشتیبانی</h2>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-8">
+                    <div class="bg-white p-3 rounded-xl shadow-sm flex items-center">
+                        <div class="bg-blue-100 text-blue-600 p-2 rounded-full"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path></svg></div>
+                        <div class="mr-3"><p class="text-gray-500 text-sm">کل تیکت‌ها</p><p class="text-xl font-bold text-gray-900" id="stats-total"></p></div>
+                    </div>
+                    <div class="bg-white p-3 rounded-xl shadow-sm flex items-center">
+                        <div class="bg-green-100 text-green-600 p-2 rounded-full"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg></div>
+                        <div class="mr-3"><p class="text-gray-500 text-sm">تیکت‌های باز</p><p class="text-xl font-bold text-gray-900" id="stats-open"></p></div>
+                    </div>
+                </div>
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <div class="bg-white p-4 rounded-xl shadow-sm"><h3 class="font-semibold mb-4 text-gray-700">تفکیک وضعیت تیکت‌ها</h3><canvas id="status-chart"></canvas></div>
+                    <div class="bg-white p-4 rounded-xl shadow-sm"><h3 class="font-semibold mb-4 text-gray-700">تفکیک دپارتمان‌ها</h3><canvas id="department-chart"></canvas></div>
+                </div>
             </div>
         </aside>
 
@@ -127,6 +142,7 @@
 
         let currentTicketId = null;
         let allTickets = {};
+        let statusChartInstance, departmentChartInstance;
         
         const ticketsListContainer = document.getElementById('tickets-list-container');
         const welcomeMessage = document.getElementById('welcome-message');
@@ -269,7 +285,6 @@
 
                 if (!response.ok) throw new Error('خطا در ارسال پیام');
                 
-                // Set status to pending user reply after admin sends a message
                 await fetch(`${WORKER_URL}/tickets/${currentTicketId}`, {
                     method: 'PATCH',
                     headers: { 'Content-Type': 'application/json' },
@@ -283,8 +298,6 @@
             }
         });
 
-        // +++ START: EDITED CODE +++
-        // Event listener for status change to notify the user
         ticketStatusSelect.addEventListener('change', async () => {
             if (!currentTicketId) return;
             const newStatus = ticketStatusSelect.value;
@@ -300,23 +313,64 @@
                     const err = await response.json();
                     throw new Error(err.error || 'خطا در به‌روزرسانی وضعیت');
                 }
-                // The database will be updated via the worker, and the 'on.value' listener will catch it.
-                // No need to manually update the DB here.
             } catch (error) {
                 console.error('Failed to update status:', error);
                 alert(` به‌روزرسانی وضعیت با خطا مواجه شد: ${error.message}`);
-                // Revert dropdown if API call fails
                 db.ref(`tickets/${currentTicketId}/status`).once('value', snapshot => {
                     ticketStatusSelect.value = snapshot.val();
                 });
             }
         });
-        // +++ END: EDITED CODE +++
+
+        function renderDashboard() {
+            const tickets = Object.values(allTickets);
+            const statusCounts = tickets.reduce((acc, t) => { acc[t.status] = (acc[t.status] || 0) + 1; return acc; }, {});
+            const deptCounts = tickets.reduce((acc, t) => { acc[t.department] = (acc[t.department] || 0) + 1; return acc; }, {});
+            
+            document.getElementById('stats-total').textContent = tickets.length;
+            document.getElementById('stats-open').textContent = (statusCounts.open || 0) + (statusCounts.pending_user_reply || 0);
+
+            if (statusChartInstance) statusChartInstance.destroy();
+            statusChartInstance = new Chart(document.getElementById('status-chart').getContext('2d'), { 
+                type: 'doughnut', 
+                data: { 
+                    labels: Object.keys(statusCounts).map(s => statusMap[s]?.text || s), 
+                    datasets: [{ data: Object.values(statusCounts), backgroundColor: ['#dcfce7', '#fef3c7', '#fee2e2'] }] 
+                } 
+            });
+
+            if (departmentChartInstance) departmentChartInstance.destroy();
+            departmentChartInstance = new Chart(document.getElementById('department-chart').getContext('2d'), { 
+                type: 'bar', 
+                data: { 
+                    labels: Object.keys(deptCounts).map(d => departmentMap[d] || d), 
+                    datasets: [{ label: 'تعداد تیکت', data: Object.values(deptCounts), backgroundColor: '#60a5fa' }] 
+                }, 
+                options: { indexAxis: 'y' } 
+            });
+        }
+
 
         searchBox.addEventListener('input', applyFilters);
         filterStatus.addEventListener('change', applyFilters);
         filterDepartment.addEventListener('change', applyFilters);
         backToListBtn.addEventListener('click', closeConversation);
+
+        const navTickets = document.getElementById('nav-tickets');
+        const navDashboard = document.getElementById('nav-dashboard');
+        const ticketsView = document.getElementById('tickets-view');
+        const dashboardView = document.getElementById('dashboard-view');
+        navTickets.addEventListener('click', () => {
+            ticketsView.classList.remove('hidden'); dashboardView.classList.add('hidden');
+            navTickets.classList.add('border-blue-500', 'font-semibold'); navTickets.classList.remove('text-gray-500');
+            navDashboard.classList.remove('border-blue-500', 'font-semibold'); navDashboard.classList.add('text-gray-500');
+        });
+        navDashboard.addEventListener('click', () => {
+            dashboardView.classList.remove('hidden'); ticketsView.classList.add('hidden');
+            navDashboard.classList.add('border-blue-500', 'font-semibold'); navDashboard.classList.remove('text-gray-500');
+            navTickets.classList.remove('border-blue-500', 'font-semibold'); navTickets.classList.add('text-gray-500');
+            renderDashboard();
+        });
 
         // Initial load
         showSkeletonLoader();
