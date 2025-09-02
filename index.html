@@ -270,10 +270,19 @@
         };
 
         // --- RENDER FUNCTIONS ---
+        // *** FUNCTION MODIFIED FOR STABILITY ***
         function renderTicketsList(tickets) {
             UI.hideSkeleton();
             DOMElements.ticketsList.container.innerHTML = '';
-            const sortedTickets = Object.keys(tickets).map(key => ({ id: key, ...tickets[key] })).sort((a, b) => new Date(b.last_updated_at || b.created_at) - new Date(a.last_updated_at || a.created_at));
+            
+            // Filter out tickets without a valid creation date before sorting to prevent errors
+            const validTickets = Object.keys(tickets)
+                .map(key => ({ id: key, ...tickets[key] }))
+                .filter(ticket => ticket && ticket.created_at);
+
+            const sortedTickets = validTickets.sort((a, b) => 
+                new Date(b.last_updated_at || b.created_at) - new Date(a.last_updated_at || a.created_at)
+            );
             
             if (sortedTickets.length === 0) {
                 DOMElements.ticketsList.container.innerHTML = '<p class="p-4 text-center text-gray-500">هیچ تیکتی یافت نشد.</p>';
@@ -281,22 +290,27 @@
             }
 
             sortedTickets.forEach(ticket => {
-                const statusInfo = statusMap[ticket.status] || { text: 'نامشخص', className: '' };
+                // Use default values to prevent errors if data is missing or malformed
+                const statusInfo = statusMap[ticket.status] || { text: 'نامشخص', className: 'status-closed' };
+                const departmentText = departmentMap[ticket.department] || 'دپارتمان نامشخص';
+                const subjectText = ticket.subject || 'بدون موضوع';
+                const displayDate = new Date(ticket.last_updated_at || ticket.created_at).toLocaleString('fa-IR');
+                const unreadIndicator = ticket.admin_unread ? '<div class="unread-dot ml-2"></div>' : '';
+
                 const ticketElement = document.createElement('div');
                 ticketElement.className = `ticket-list-item flex flex-col p-4 border-b border-gray-100 cursor-pointer hover:bg-gray-50 ${ticket.id === currentTicketId ? 'active' : ''}`;
                 ticketElement.dataset.ticketId = ticket.id;
-                const unreadIndicator = ticket.admin_unread ? '<div class="unread-dot ml-2"></div>' : '';
 
                 ticketElement.innerHTML = `
                     <div class="flex justify-between items-start">
-                        <p class="font-bold text-sm text-gray-800 truncate pr-2">${ticket.subject}</p>
+                        <p class="font-bold text-sm text-gray-800 truncate pr-2">${subjectText}</p>
                         <span class="status-badge flex-shrink-0 ${statusInfo.className}">${statusInfo.text}</span>
                     </div>
                     <div class="flex justify-between items-center mt-2">
-                        <p class="text-xs text-gray-500">${departmentMap[ticket.department] || 'نامشخص'}</p>
+                        <p class="text-xs text-gray-500">${departmentText}</p>
                         <div class="flex items-center">
                             ${unreadIndicator}
-                            <p class="text-xs text-gray-400">${new Date(ticket.last_updated_at || ticket.created_at).toLocaleString('fa-IR')}</p>
+                            <p class="text-xs text-gray-400">${displayDate}</p>
                         </div>
                     </div>
                 `;
@@ -304,18 +318,21 @@
                 DOMElements.ticketsList.container.appendChild(ticketElement);
             });
         }
-
+        
+        // *** FUNCTION MODIFIED FOR STABILITY ***
         function renderMessage(msg, ticketData) {
             const msgElement = document.createElement('div');
             const isUser = msg.sender === 'user';
             const senderName = isUser ? (ticketData.user_name || 'کاربر') : 'پشتیبانی';
-            
+            // Ensure message text is a string to prevent errors
+            const messageText = (msg.text || '').replace(/\n/g, '<br>');
+
             msgElement.className = `flex items-start gap-3 ${isUser ? '' : 'flex-row-reverse'}`;
             msgElement.innerHTML = `
                 <div class="w-8 h-8 rounded-full flex-shrink-0 ${isUser ? 'bg-green-100 text-green-700' : 'bg-indigo-100 text-indigo-700'} flex items-center justify-center font-bold text-sm">${senderName.charAt(0)}</div>
                 <div class="flex flex-col ${isUser ? '' : 'items-end'}">
                     <div class="p-3 max-w-md ${isUser ? 'message-user' : 'message-admin'}">
-                        <p class="text-sm break-words">${msg.text.replace(/\n/g, '<br>')}</p>
+                        <p class="text-sm break-words">${messageText}</p>
                     </div>
                     <span class="text-xs text-gray-400 mt-1 px-1">${new Date(msg.created_at).toLocaleTimeString('fa-IR', { hour: '2-digit', minute: '2-digit' })}</span>
                 </div>
@@ -327,8 +344,8 @@
             const tickets = Object.values(allTickets);
             if (tickets.length === 0) return;
 
-            const statusCounts = tickets.reduce((acc, t) => { acc[t.status] = (acc[t.status] || 0) + 1; return acc; }, {});
-            const deptCounts = tickets.reduce((acc, t) => { acc[t.department] = (acc[t.department] || 0) + 1; return acc; }, {});
+            const statusCounts = tickets.reduce((acc, t) => { if(t && t.status) { acc[t.status] = (acc[t.status] || 0) + 1; } return acc; }, {});
+            const deptCounts = tickets.reduce((acc, t) => { if(t && t.department) { acc[t.department] = (acc[t.department] || 0) + 1; } return acc; }, {});
             
             document.getElementById('stats-total').textContent = tickets.length;
             document.getElementById('stats-open').textContent = statusCounts.open || 0;
@@ -369,14 +386,23 @@
         }
         
         // --- LOGIC FUNCTIONS ---
+        // *** FUNCTION MODIFIED FOR STABILITY ***
         function applyFilters() {
             const searchTerm = DOMElements.forms.search.value.toLowerCase();
             const status = DOMElements.forms.filterStatus.value;
             const department = DOMElements.forms.filterDepartment.value;
 
+            if (!allTickets) {
+                renderTicketsList({});
+                return;
+            }
+
             const filteredTickets = Object.keys(allTickets).filter(key => {
                 const ticket = allTickets[key];
-                const searchMatch = ticket.subject.toLowerCase().includes(searchTerm) || 
+                // Ensure ticket is a valid object before filtering
+                if (!ticket) return false;
+                
+                const searchMatch = (ticket.subject || '').toLowerCase().includes(searchTerm) || 
                                     (ticket.user_name || '').toLowerCase().includes(searchTerm) || 
                                     (ticket.telegram_id || '').toString().includes(searchTerm);
                 const statusMatch = (status === 'all' || ticket.status === status);
@@ -402,8 +428,8 @@
             db.ref(`tickets/${ticketId}`).on('value', (snapshot) => {
                 const ticketData = snapshot.val();
                 if (ticketData) {
-                    DOMElements.conversation.subject.textContent = ticketData.subject;
-                    DOMElements.conversation.userId.textContent = `کاربر: ${ticketData.user_name || ticketData.telegram_id}`;
+                    DOMElements.conversation.subject.textContent = ticketData.subject || 'بدون موضوع';
+                    DOMElements.conversation.userId.textContent = `کاربر: ${ticketData.user_name || ticketData.telegram_id || 'ناشناس'}`;
                     DOMElements.forms.statusSelect.value = ticketData.status;
                 }
             });
@@ -444,6 +470,7 @@
                 DOMElements.forms.replyInput.style.height = 'auto';
             } catch (error) {
                 console.error("Failed to send message:", error);
+                // You could show an error message to the user here
             }
         }
         
@@ -458,6 +485,7 @@
                 if (!response.ok) throw new Error('خطا در به‌روزرسانی وضعیت');
             } catch (error) {
                 console.error('Failed to update status:', error);
+                // Revert the dropdown to the actual status from the database on failure
                 db.ref(`tickets/${currentTicketId}/status`).once('value', snapshot => {
                     DOMElements.forms.statusSelect.value = snapshot.val();
                 });
@@ -502,4 +530,3 @@
     </script>
 </body>
 </html>
-
