@@ -112,7 +112,7 @@
                         <p class="mt-4 text-lg">برای مشاهده گفتگو، یک تیکت را انتخاب کنید.</p>
                     </div>
                     
-                    <div id="conversation-content" class="hidden flex-1 flex flex-col">
+                    <div id="conversation-content" class="hidden flex-1 flex flex-col overflow-hidden">
                         <header class="p-3 border-b bg-white z-10 flex justify-between items-center flex-shrink-0">
                             <div class="flex items-center">
                                 <button id="back-to-list-btn" class="md:hidden ml-2 p-2 rounded-full hover:bg-gray-100">
@@ -134,10 +134,15 @@
                         
                         <div id="messages-container" class="flex-1 p-6 overflow-y-auto space-y-6"></div>
 
-                        <footer class="p-3 bg-white border-t">
+                        <footer class="p-3 bg-white border-t flex-shrink-0 shadow-[0_-2px_8px_rgba(0,0,0,0.07)]">
                             <form id="reply-form" class="flex items-center space-x-2 space-x-reverse">
-                                <textarea id="reply-message" rows="1" class="flex-grow p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-400 resize-none bg-gray-50" placeholder="پاسخ خود را بنویسید..."></textarea>
-                                <button type="submit" class="bg-indigo-600 text-white font-semibold py-3 px-5 rounded-lg hover:bg-indigo-700 transition-colors duration-200 flex-shrink-0">ارسال</button>
+                                <button type="button" class="p-2 text-gray-500 hover:text-indigo-600 flex-shrink-0" title="پیوست فایل">
+                                     <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"></path></svg>
+                                </button>
+                                <textarea id="reply-message" rows="1" class="flex-grow p-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-400 resize-none bg-gray-50 text-sm" placeholder="پاسخ خود را بنویسید..."></textarea>
+                                <button type="submit" class="bg-indigo-600 text-white font-semibold w-12 h-12 rounded-lg hover:bg-indigo-700 transition-colors duration-200 flex-shrink-0 flex items-center justify-center">
+                                     <svg class="w-6 h-6 transform -rotate-45" fill="currentColor" viewBox="0 0 20 20"><path d="M10.894 2.553a1 1 0 00-1.788 0l-7 14a1 1 0 001.169 1.409l5-1.429A1 1 0 009 15.571V11a1 1 0 112 0v4.571a1 1 0 00.725.962l5 1.428a1 1 0 001.17-1.408l-7-14z"></path></svg>
+                                </button>
                             </form>
                         </footer>
                     </div>
