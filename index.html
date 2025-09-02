@@ -9,123 +9,160 @@
     <!-- Firebase SDKs -->
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-storage.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
-        body { font-family: 'Vazirmatn', sans-serif; background-color: #f3f4f6; color: #111827; }
-        .status-badge { padding: 0.25rem 0.75rem; border-radius: 9999px; font-size: 0.7rem; font-weight: 500; }
+        body { 
+            font-family: 'Vazirmatn', sans-serif; 
+            background-color: #f7f9fc; 
+            color: #1a202c;
+        }
+        /* Custom scrollbar for a cleaner look */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: #f1f1f1; }
+        ::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 6px; }
+        ::-webkit-scrollbar-thumb:hover { background: #a5b4fc; }
+
+        /* Status badge styles */
+        .status-badge { padding: 0.2rem 0.6rem; border-radius: 9999px; font-size: 0.75rem; font-weight: 500; text-align: center; }
         .status-open { background-color: #dcfce7; color: #166534; }
-        .status-pending_user_reply { background-color: #fef3c7; color: #92400e; }
+        .status-pending_user_reply { background-color: #fef9c3; color: #a16207; }
         .status-closed { background-color: #fee2e2; color: #991b1b; }
+
+        /* Message bubble styles */
+        .message-user { background-color: #ffffff; color: #1f2937; border-radius: 1.25rem 1.25rem 1.25rem 0.25rem; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+        .message-admin { background-color: #e0e7ff; color: #312e81; border-radius: 1.25rem 1.25rem 0.25rem 1.25rem; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
         
-        .message-user { background-color: #ffffff; color: #1f2937; border-radius: 1rem 1rem 1rem 0.25rem; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
-        .message-admin { background-color: #dbeafe; color: #1e40af; border-radius: 1rem 1rem 0.25rem 1rem; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
-        .sender-name { font-size: 0.8rem; font-weight: 500; margin-bottom: 0.25rem; padding: 0 0.5rem; }
-        
-        .ticket-list-item.active { background-color: #eef2ff; border-right: 4px solid #4f46e5; }
-        #messages-container { background-color: #e5ddd5; background-image: url('https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png'); }
-        .unread-dot { width: 10px; height: 10px; background-color: #22c55e; border-radius: 9999px; }
+        /* Active ticket item in the list */
+        .ticket-list-item.active { 
+            background-color: #eef2ff; 
+            border-right: 4px solid #4f46e5;
+        }
+
+        /* Background pattern for messages container */
+        #messages-container {
+             background-color: #f0f2f5;
+        }
+
+        /* Unread dot indicator */
+        .unread-dot { width: 10px; height: 10px; background-color: #4f46e5; border-radius: 9999px; }
+
+        /* Skeleton loader animation */
         .skeleton { animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
         @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: .5; } }
+
+        /* Active Nav Link */
+        .nav-link-active {
+            border-bottom: 2px solid #4f46e5;
+            color: #4f46e5;
+            font-weight: 600;
+        }
     </style>
 </head>
-<body class="h-screen overflow-x-hidden">
+<body class="h-screen overflow-hidden">
 
-    <div class="relative h-full w-full overflow-x-hidden md:flex">
-        <!-- Sidebar -->
-        <aside id="sidebar" class="w-full md:w-1/3 bg-white border-l border-gray-200 flex flex-col transition-transform duration-300 ease-in-out">
-            <header class="p-4 border-b">
-                <h1 class="text-xl font-bold">پنل مدیریت</h1>
-                <nav class="mt-4 flex border-b">
-                    <button id="nav-tickets" class="px-4 py-2 border-b-2 border-blue-500 font-semibold">تیکت‌ها</button>
-                    <button id="nav-dashboard" class="px-4 py-2 text-gray-500">داشبورد</button>
-                </nav>
+    <div class="flex flex-col h-full w-full">
+        <!-- Main Content -->
+        <main class="flex-1 flex flex-col h-full overflow-hidden">
+            <!-- Main Header -->
+            <header class="flex items-center justify-between h-16 px-6 bg-white border-b border-gray-200 flex-shrink-0">
+                <div class="flex items-center space-x-8 space-x-reverse">
+                    <h1 class="text-xl font-bold text-gray-800">پنل مدیریت</h1>
+                    <nav class="flex items-center h-full space-x-6 space-x-reverse">
+                        <a href="#" id="nav-tickets" class="flex items-center h-full px-2 text-sm nav-link-active">
+                            <span>تیکت‌ها</span>
+                        </a>
+                        <a href="#" id="nav-dashboard" class="flex items-center h-full px-2 text-sm text-gray-500 hover:text-gray-800">
+                            <span>داشبورد</span>
+                        </a>
+                    </nav>
+                </div>
+                <div><!-- Placeholder for user menu or other icons --></div>
             </header>
-            
-            <div id="tickets-view" class="flex flex-col flex-grow">
-                <div class="p-4 border-b">
-                    <input type="text" id="search-box" placeholder="جستجو..." class="w-full p-2 border rounded-md">
-                    <div class="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2 sm:space-x-reverse mt-2">
-                        <select id="filter-status" class="w-full sm:w-1/2 p-2 border rounded-md">
-                            <option value="all">همه وضعیت‌ها</option>
-                            <option value="open">باز (در حال بررسی)</option>
-                            <option value="pending_user_reply">در انتظار پاسخ کاربر</option>
-                            <option value="closed">بسته شده</option>
-                        </select>
-                        <select id="filter-department" class="w-full sm:w-1/2 p-2 border rounded-md">
-                            <option value="all">همه دپارتمان‌ها</option>
-                            <option value="general">سوالات متفرقه</option>
-                            <option value="technical">پشتیبانی فنی</option>
-                            <option value="sales">بخش فروش</option>
-                        </select>
-                    </div>
-                </div>
-                <div id="tickets-list-container" class="p-2 space-y-2 flex-grow overflow-y-auto">
-                    <div id="loading-skeleton" class="space-y-2"></div>
-                </div>
-            </div>
 
-            <div id="dashboard-view" class="p-6 overflow-y-auto hidden bg-gray-50">
-                 <!-- Dashboard content remains the same -->
-                 <h2 class="text-xl font-bold mb-6 text-gray-800">داشبورد عملکرد پشتیبانی</h2>
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-8">
-                    <div class="bg-white p-3 rounded-xl shadow-sm flex items-center">
-                        <div class="bg-blue-100 text-blue-600 p-2 rounded-full"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path></svg></div>
-                        <div class="mr-3"><p class="text-gray-500 text-sm">کل تیکت‌ها</p><p class="text-xl font-bold text-gray-900" id="stats-total"></p></div>
-                    </div>
-                    <div class="bg-white p-3 rounded-xl shadow-sm flex items-center">
-                        <div class="bg-green-100 text-green-600 p-2 rounded-full"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg></div>
-                        <div class="mr-3"><p class="text-gray-500 text-sm">تیکت‌های باز</p><p class="text-xl font-bold text-gray-900" id="stats-open"></p></div>
-                    </div>
-                </div>
-                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                    <div class="bg-white p-4 rounded-xl shadow-sm"><h3 class="font-semibold mb-4 text-gray-700">تفکیک وضعیت تیکت‌ها</h3><canvas id="status-chart"></canvas></div>
-                    <div class="bg-white p-4 rounded-xl shadow-sm"><h3 class="font-semibold mb-4 text-gray-700">تفکیک دپارتمان‌ها</h3><canvas id="department-chart"></canvas></div>
-                </div>
-            </div>
-        </aside>
-
-        <!-- Main Conversation View -->
-        <main id="conversation-view" class="w-full h-full flex flex-col bg-gray-50 absolute top-0 right-0 md:relative md:w-2/3 transform translate-x-full md:translate-x-0 transition-transform duration-300 ease-in-out z-20">
-            <div id="welcome-message" class="flex flex-col items-center justify-center h-full text-gray-500">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-24 w-24" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1"><path stroke-linecap="round" stroke-linejoin="round" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" /></svg>
-                <p class="mt-4 text-lg">برای مشاهده گفتگو، یک تیکت را انتخاب کنید.</p>
-            </div>
-            
-            <div id="conversation-content" class="hidden flex-1 flex flex-col">
-                <header class="p-3 border-b bg-white z-10 flex justify-between items-center">
-                    <div class="flex items-center">
-                        <button id="back-to-list-btn" class="md:hidden ml-2 p-2 rounded-full hover:bg-gray-100">
-                            <svg class="w-6 h-6 transform rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"></path></svg>
-                        </button>
-                        <div>
-                            <h2 id="ticket-subject" class="font-bold text-lg"></h2>
-                            <p id="ticket-user-id" class="text-sm text-gray-500"></p>
+            <!-- Tickets View -->
+            <div id="tickets-view" class="flex-1 flex overflow-hidden">
+                <!-- Tickets List Panel -->
+                <div id="tickets-list-panel" class="w-full md:w-2/5 lg:w-1/3 flex-shrink-0 bg-white border-l border-gray-200 flex flex-col">
+                    <div class="p-3 border-b">
+                        <input type="text" id="search-box" placeholder="جستجوی تیکت..." class="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400">
+                        <div class="grid grid-cols-2 gap-2 mt-2">
+                            <select id="filter-status" class="w-full p-2 border border-gray-300 rounded-lg text-sm">
+                                <option value="all">همه وضعیت‌ها</option>
+                                <option value="open">باز</option>
+                                <option value="pending_user_reply">در انتظار پاسخ</option>
+                                <option value="closed">بسته شده</option>
+                            </select>
+                            <select id="filter-department" class="w-full p-2 border border-gray-300 rounded-lg text-sm">
+                                <option value="all">همه دپارتمان‌ها</option>
+                                <option value="general">سوالات متفرقه</option>
+                                <option value="technical">پشتیبانی فنی</option>
+                                <option value="sales">بخش فروش</option>
+                            </select>
                         </div>
                     </div>
-                    <div class="flex items-center space-x-3 space-x-reverse">
-                        <label for="ticket-status" class="font-medium text-sm">وضعیت:</label>
-                        <select id="ticket-status" class="border rounded-md p-2 text-sm bg-transparent">
-                            <option value="open">باز (در حال بررسی)</option>
-                            <option value="pending_user_reply">در انتظار پاسخ کاربر</option>
-                            <option value="closed">بسته شده</option>
-                        </select>
+                    <div id="tickets-list-container" class="flex-grow overflow-y-auto">
+                        <div id="loading-skeleton" class="p-2 space-y-2"></div>
                     </div>
-                </header>
-                
-                <div id="messages-container" class="flex-1 p-4 overflow-y-auto space-y-4"></div>
+                </div>
 
-                <footer class="p-4 bg-gray-100 border-t">
-                    <form id="reply-form" class="flex items-center space-x-2 space-x-reverse">
-                        <textarea id="reply-message" rows="1" class="flex-grow p-2 border rounded-md focus:ring-2 focus:ring-blue-500 bg-transparent" placeholder="پاسخ خود را بنویسید..."></textarea>
-                        <button type="submit" class="bg-blue-600 text-white font-bold py-2 px-6 rounded-md hover:bg-blue-700 transition">ارسال</button>
-                    </form>
-                </footer>
+                <!-- Conversation Panel -->
+                <div id="conversation-panel" class="w-full md:w-3/5 lg:w-2/3 flex flex-col bg-gray-50 absolute md:relative inset-0 transform md:transform-none translate-x-full md:translate-x-0 transition-transform duration-300 ease-in-out">
+                    <div id="welcome-message" class="flex flex-col items-center justify-center h-full text-gray-400">
+                        <svg class="w-28 h-28" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path></svg>
+                        <p class="mt-4 text-lg">برای مشاهده گفتگو، یک تیکت را انتخاب کنید.</p>
+                    </div>
+                    
+                    <div id="conversation-content" class="hidden flex-1 flex flex-col">
+                        <header class="p-3 border-b bg-white z-10 flex justify-between items-center flex-shrink-0">
+                            <div class="flex items-center">
+                                <button id="back-to-list-btn" class="md:hidden ml-2 p-2 rounded-full hover:bg-gray-100">
+                                    <svg class="w-6 h-6 transform rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"></path></svg>
+                                </button>
+                                <div>
+                                    <h2 id="ticket-subject" class="font-bold text-lg text-gray-800"></h2>
+                                    <p id="ticket-user-id" class="text-sm text-gray-500"></p>
+                                </div>
+                            </div>
+                            <div class="flex items-center space-x-3 space-x-reverse">
+                                <select id="ticket-status" class="border border-gray-300 rounded-lg p-2 text-sm bg-gray-50 focus:ring-2 focus:ring-indigo-400">
+                                    <option value="open">باز (در حال بررسی)</option>
+                                    <option value="pending_user_reply">در انتظار پاسخ کاربر</option>
+                                    <option value="closed">بسته شده</option>
+                                </select>
+                            </div>
+                        </header>
+                        
+                        <div id="messages-container" class="flex-1 p-6 overflow-y-auto space-y-6"></div>
+
+                        <footer class="p-3 bg-white border-t">
+                            <form id="reply-form" class="flex items-center space-x-2 space-x-reverse">
+                                <textarea id="reply-message" rows="1" class="flex-grow p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-400 resize-none bg-gray-50" placeholder="پاسخ خود را بنویسید..."></textarea>
+                                <button type="submit" class="bg-indigo-600 text-white font-semibold py-3 px-5 rounded-lg hover:bg-indigo-700 transition-colors duration-200 flex-shrink-0">ارسال</button>
+                            </form>
+                        </footer>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Dashboard View -->
+            <div id="dashboard-view" class="p-6 overflow-y-auto hidden bg-gray-50 flex-1">
+                 <h2 class="text-2xl font-bold mb-6 text-gray-800">داشبورد عملکرد پشتیبانی</h2>
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+                    <div class="bg-white p-4 rounded-xl shadow-sm flex items-center"><div class="bg-blue-100 text-blue-600 p-3 rounded-full"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path></svg></div><div class="mr-4"><p class="text-gray-500 text-sm">کل تیکت‌ها</p><p class="text-2xl font-bold text-gray-900" id="stats-total">0</p></div></div>
+                    <div class="bg-white p-4 rounded-xl shadow-sm flex items-center"><div class="bg-green-100 text-green-600 p-3 rounded-full"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg></div><div class="mr-4"><p class="text-gray-500 text-sm">تیکت‌های باز</p><p class="text-2xl font-bold text-gray-900" id="stats-open">0</p></div></div>
+                    <div class="bg-white p-4 rounded-xl shadow-sm flex items-center"><div class="bg-yellow-100 text-yellow-600 p-3 rounded-full"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg></div><div class="mr-4"><p class="text-gray-500 text-sm">در انتظار پاسخ</p><p class="text-2xl font-bold text-gray-900" id="stats-pending">0</p></div></div>
+                    <div class="bg-white p-4 rounded-xl shadow-sm flex items-center"><div class="bg-red-100 text-red-600 p-3 rounded-full"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg></div><div class="mr-4"><p class="text-gray-500 text-sm">بسته شده</p><p class="text-2xl font-bold text-gray-900" id="stats-closed">0</p></div></div>
+                </div>
+                <div class="grid grid-cols-1 lg:grid-cols-5 gap-6">
+                    <div class="bg-white p-5 rounded-xl shadow-sm lg:col-span-2"><h3 class="font-semibold mb-4 text-gray-700">تفکیک وضعیت تیکت‌ها</h3><canvas id="status-chart"></canvas></div>
+                    <div class="bg-white p-5 rounded-xl shadow-sm lg:col-span-3"><h3 class="font-semibold mb-4 text-gray-700">تفکیک دپارتمان‌ها</h3><canvas id="department-chart"></canvas></div>
+                </div>
             </div>
         </main>
     </div>
     
     <script>
+        // --- CONFIG ---
         const WORKER_URL = "https://support-api-worker.amiruserbot7.workers.dev";
         const firebaseConfig = {
             apiKey: "AIzaSyAjBkdCe-kJK2VFfM3lSFyFiFNXElOCPSg",
@@ -137,60 +174,206 @@
             appId: "1:220983533006:web:87f404486afb9f6a06df9f"
         };
 
+        // --- FIREBASE INIT ---
         firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
 
+        // --- GLOBAL STATE ---
         let currentTicketId = null;
         let allTickets = {};
         let statusChartInstance, departmentChartInstance;
         
-        const ticketsListContainer = document.getElementById('tickets-list-container');
-        const welcomeMessage = document.getElementById('welcome-message');
-        const conversationView = document.getElementById('conversation-view');
-        const conversationContent = document.getElementById('conversation-content');
-        const ticketSubjectHeader = document.getElementById('ticket-subject');
-        const ticketUserIdHeader = document.getElementById('ticket-user-id');
-        const messagesContainer = document.getElementById('messages-container');
-        const replyForm = document.getElementById('reply-form');
-        const replyMessageInput = document.getElementById('reply-message');
-        const ticketStatusSelect = document.getElementById('ticket-status');
-        const searchBox = document.getElementById('search-box');
-        const filterStatus = document.getElementById('filter-status');
-        const filterDepartment = document.getElementById('filter-department');
-        const loadingSkeleton = document.getElementById('loading-skeleton');
-        const backToListBtn = document.getElementById('back-to-list-btn');
-
-        const departmentMap = {
-            general: 'سوالات متفرقه',
-            technical: 'پشتیبانی فنی',
-            sales: 'بخش فروش'
+        // --- DOM ELEMENTS ---
+        const DOMElements = {
+            nav: {
+                tickets: document.getElementById('nav-tickets'),
+                dashboard: document.getElementById('nav-dashboard')
+            },
+            views: {
+                tickets: document.getElementById('tickets-view'),
+                dashboard: document.getElementById('dashboard-view')
+            },
+            ticketsList: {
+                panel: document.getElementById('tickets-list-panel'),
+                container: document.getElementById('tickets-list-container'),
+                skeleton: document.getElementById('loading-skeleton')
+            },
+            conversation: {
+                panel: document.getElementById('conversation-panel'),
+                welcome: document.getElementById('welcome-message'),
+                content: document.getElementById('conversation-content'),
+                subject: document.getElementById('ticket-subject'),
+                userId: document.getElementById('ticket-user-id'),
+                messages: document.getElementById('messages-container'),
+                backBtn: document.getElementById('back-to-list-btn')
+            },
+            forms: {
+                reply: document.getElementById('reply-form'),
+                replyInput: document.getElementById('reply-message'),
+                statusSelect: document.getElementById('ticket-status'),
+                search: document.getElementById('search-box'),
+                filterStatus: document.getElementById('filter-status'),
+                filterDepartment: document.getElementById('filter-department')
+            }
         };
+
+        // --- DATA MAPS ---
+        const departmentMap = { general: 'سوالات متفرقه', technical: 'پشتیبانی فنی', sales: 'بخش فروش' };
         const statusMap = {
-            open: { text: 'باز (در حال بررسی)', className: 'status-open' },
-            pending_user_reply: { text: 'در انتظار پاسخ کاربر', className: 'status-pending_user_reply' },
+            open: { text: 'باز', className: 'status-open' },
+            pending_user_reply: { text: 'در انتظار پاسخ', className: 'status-pending_user_reply' },
             closed: { text: 'بسته شده', className: 'status-closed' }
         };
-
-        function showSkeletonLoader() {
-            let skeletons = '';
-            for (let i = 0; i < 10; i++) {
-                skeletons += `<div class="p-4 border rounded-lg bg-white animate-pulse"><div class="h-4 bg-gray-300 rounded w-3/4"></div><div class="h-3 bg-gray-300 rounded w-1/2 mt-2"></div></div>`;
+        
+        // --- UI FUNCTIONS ---
+        const UI = {
+            showSkeleton: () => {
+                let skeletons = '';
+                for (let i = 0; i < 8; i++) {
+                    skeletons += `<div class="p-4 border-b border-gray-200 animate-pulse"><div class="h-4 bg-gray-200 rounded w-3/4"></div><div class="h-3 bg-gray-200 rounded w-1/2 mt-3"></div></div>`;
+                }
+                DOMElements.ticketsList.skeleton.innerHTML = skeletons;
+                DOMElements.ticketsList.skeleton.style.display = 'block';
+            },
+            hideSkeleton: () => { DOMElements.ticketsList.skeleton.style.display = 'none'; },
+            switchView: (viewName) => {
+                if (viewName === 'dashboard') {
+                    DOMElements.views.tickets.classList.add('hidden');
+                    DOMElements.views.dashboard.classList.remove('hidden');
+                    DOMElements.nav.dashboard.classList.add('nav-link-active');
+                    DOMElements.nav.dashboard.classList.remove('text-gray-500');
+                    DOMElements.nav.tickets.classList.remove('nav-link-active');
+                    DOMElements.nav.tickets.classList.add('text-gray-500');
+                    renderDashboard();
+                } else {
+                    DOMElements.views.dashboard.classList.add('hidden');
+                    DOMElements.views.tickets.classList.remove('hidden');
+                    DOMElements.nav.tickets.classList.add('nav-link-active');
+                    DOMElements.nav.tickets.classList.remove('text-gray-500');
+                    DOMElements.nav.dashboard.classList.remove('nav-link-active');
+                    DOMElements.nav.dashboard.classList.add('text-gray-500');
+                }
+            },
+            showConversation: () => {
+                DOMElements.conversation.panel.classList.remove('translate-x-full');
+            },
+            hideConversation: () => {
+                DOMElements.conversation.panel.classList.add('translate-x-full');
+                currentTicketId = null;
+                 document.querySelectorAll('.ticket-list-item.active').forEach(el => el.classList.remove('active'));
             }
-            loadingSkeleton.innerHTML = skeletons;
-            loadingSkeleton.style.display = 'block';
+        };
+
+        // --- RENDER FUNCTIONS ---
+        function renderTicketsList(tickets) {
+            UI.hideSkeleton();
+            DOMElements.ticketsList.container.innerHTML = '';
+            const sortedTickets = Object.keys(tickets).map(key => ({ id: key, ...tickets[key] })).sort((a, b) => new Date(b.last_updated_at || b.created_at) - new Date(a.last_updated_at || a.created_at));
+            
+            if (sortedTickets.length === 0) {
+                DOMElements.ticketsList.container.innerHTML = '<p class="p-4 text-center text-gray-500">هیچ تیکتی یافت نشد.</p>';
+                return;
+            }
+
+            sortedTickets.forEach(ticket => {
+                const statusInfo = statusMap[ticket.status] || { text: 'نامشخص', className: '' };
+                const ticketElement = document.createElement('div');
+                ticketElement.className = `ticket-list-item flex flex-col p-4 border-b border-gray-100 cursor-pointer hover:bg-gray-50 ${ticket.id === currentTicketId ? 'active' : ''}`;
+                ticketElement.dataset.ticketId = ticket.id;
+                const unreadIndicator = ticket.admin_unread ? '<div class="unread-dot ml-2"></div>' : '';
+
+                ticketElement.innerHTML = `
+                    <div class="flex justify-between items-start">
+                        <p class="font-bold text-sm text-gray-800 truncate pr-2">${ticket.subject}</p>
+                        <span class="status-badge flex-shrink-0 ${statusInfo.className}">${statusInfo.text}</span>
+                    </div>
+                    <div class="flex justify-between items-center mt-2">
+                        <p class="text-xs text-gray-500">${departmentMap[ticket.department] || 'نامشخص'}</p>
+                        <div class="flex items-center">
+                            ${unreadIndicator}
+                            <p class="text-xs text-gray-400">${new Date(ticket.last_updated_at || ticket.created_at).toLocaleString('fa-IR')}</p>
+                        </div>
+                    </div>
+                `;
+                ticketElement.addEventListener('click', () => openConversation(ticket.id));
+                DOMElements.ticketsList.container.appendChild(ticketElement);
+            });
         }
 
-        function hideSkeletonLoader() {
-            loadingSkeleton.style.display = 'none';
+        function renderMessage(msg, ticketData) {
+            const msgElement = document.createElement('div');
+            const isUser = msg.sender === 'user';
+            const senderName = isUser ? (ticketData.user_name || 'کاربر') : 'پشتیبانی';
+            
+            msgElement.className = `flex items-start gap-3 ${isUser ? '' : 'flex-row-reverse'}`;
+            msgElement.innerHTML = `
+                <div class="w-8 h-8 rounded-full flex-shrink-0 ${isUser ? 'bg-green-100 text-green-700' : 'bg-indigo-100 text-indigo-700'} flex items-center justify-center font-bold text-sm">${senderName.charAt(0)}</div>
+                <div class="flex flex-col ${isUser ? '' : 'items-end'}">
+                    <div class="p-3 max-w-md ${isUser ? 'message-user' : 'message-admin'}">
+                        <p class="text-sm break-words">${msg.text.replace(/\n/g, '<br>')}</p>
+                    </div>
+                    <span class="text-xs text-gray-400 mt-1 px-1">${new Date(msg.created_at).toLocaleTimeString('fa-IR', { hour: '2-digit', minute: '2-digit' })}</span>
+                </div>
+            `;
+            DOMElements.conversation.messages.appendChild(msgElement);
         }
         
+        function renderDashboard() {
+            const tickets = Object.values(allTickets);
+            if (tickets.length === 0) return;
+
+            const statusCounts = tickets.reduce((acc, t) => { acc[t.status] = (acc[t.status] || 0) + 1; return acc; }, {});
+            const deptCounts = tickets.reduce((acc, t) => { acc[t.department] = (acc[t.department] || 0) + 1; return acc; }, {});
+            
+            document.getElementById('stats-total').textContent = tickets.length;
+            document.getElementById('stats-open').textContent = statusCounts.open || 0;
+            document.getElementById('stats-pending').textContent = statusCounts.pending_user_reply || 0;
+            document.getElementById('stats-closed').textContent = statusCounts.closed || 0;
+
+            const statusChartCtx = document.getElementById('status-chart').getContext('2d');
+            if (statusChartInstance) statusChartInstance.destroy();
+            statusChartInstance = new Chart(statusChartCtx, { 
+                type: 'doughnut', 
+                data: { 
+                    labels: Object.keys(statusCounts).map(s => (statusMap[s] ? statusMap[s].text : s)), 
+                    datasets: [{ 
+                        data: Object.values(statusCounts), 
+                        backgroundColor: ['#dcfce7', '#fef9c3', '#fee2e2'],
+                        borderColor: '#ffffff',
+                        borderWidth: 2,
+                    }] 
+                },
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom' }}}
+            });
+
+            const deptChartCtx = document.getElementById('department-chart').getContext('2d');
+            if (departmentChartInstance) departmentChartInstance.destroy();
+            departmentChartInstance = new Chart(deptChartCtx, { 
+                type: 'bar', 
+                data: { 
+                    labels: Object.keys(deptCounts).map(d => departmentMap[d] || d), 
+                    datasets: [{ 
+                        label: 'تعداد تیکت', 
+                        data: Object.values(deptCounts), 
+                        backgroundColor: '#818cf8',
+                        borderRadius: 6
+                    }] 
+                }, 
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }}, indexAxis: 'y' } 
+            });
+        }
+        
+        // --- LOGIC FUNCTIONS ---
         function applyFilters() {
-            const searchTerm = searchBox.value.toLowerCase();
-            const status = filterStatus.value;
-            const department = filterDepartment.value;
+            const searchTerm = DOMElements.forms.search.value.toLowerCase();
+            const status = DOMElements.forms.filterStatus.value;
+            const department = DOMElements.forms.filterDepartment.value;
+
             const filteredTickets = Object.keys(allTickets).filter(key => {
                 const ticket = allTickets[key];
-                const searchMatch = ticket.subject.toLowerCase().includes(searchTerm) || (ticket.user_name || '').toLowerCase().includes(searchTerm) || (ticket.telegram_id || '').toString().includes(searchTerm);
+                const searchMatch = ticket.subject.toLowerCase().includes(searchTerm) || 
+                                    (ticket.user_name || '').toLowerCase().includes(searchTerm) || 
+                                    (ticket.telegram_id || '').toString().includes(searchTerm);
                 const statusMatch = (status === 'all' || ticket.status === status);
                 const departmentMatch = (department === 'all' || ticket.department === department);
                 return searchMatch && statusMatch && departmentMatch;
@@ -198,83 +381,46 @@
             renderTicketsList(filteredTickets);
         }
 
-        function renderTicketsList(tickets) {
-            hideSkeletonLoader();
-            ticketsListContainer.innerHTML = '';
-            const sortedTickets = Object.keys(tickets).map(key => ({ id: key, ...tickets[key] })).sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
-            if (sortedTickets.length === 0) {
-                ticketsListContainer.innerHTML = '<p class="p-4 text-center text-gray-500">هیچ تیکتی یافت نشد.</p>';
-                return;
-            }
-            sortedTickets.forEach(ticket => {
-                const statusInfo = statusMap[ticket.status] || { text: 'نامشخص', className: '' };
-                const ticketElement = document.createElement('div');
-                ticketElement.className = `ticket-list-item border border-transparent rounded-lg p-3 bg-white cursor-pointer hover:border-blue-300 ${ticket.id === currentTicketId ? 'active' : ''}`;
-                ticketElement.dataset.ticketId = ticket.id;
-                const unreadIndicator = ticket.admin_unread ? '<div class="unread-dot ml-2"></div>' : '';
-                ticketElement.innerHTML = `<div class="flex justify-between items-center"><p class="font-bold truncate text-sm">${ticket.subject}</p><span class="status-badge flex-shrink-0 ${statusInfo.className}">${statusInfo.text}</span></div><div class="flex justify-between items-center mt-2"><p class="text-xs text-gray-500">${departmentMap[ticket.department] || 'نامشخص'}</p><div class="flex items-center">${unreadIndicator}<p class="text-xs text-gray-400">${new Date(ticket.created_at).toLocaleString('fa-IR')}</p></div></div>`;
-                ticketElement.addEventListener('click', () => openConversation(ticket.id));
-                ticketsListContainer.appendChild(ticketElement);
-            });
-        }
-        
-        function renderMessage(msg, ticketData) {
-            const msgElement = document.createElement('div');
-            const isUser = msg.sender === 'user';
-            msgElement.className = `flex flex-col max-w-lg w-full ${isUser ? 'self-start' : 'self-end'}`;
-            let senderName = isUser ? (ticketData.user_name || 'کاربر') : 'پشتیبانی';
-            msgElement.innerHTML = `<p class="sender-name ${isUser ? 'text-right text-green-600' : 'text-left text-blue-600'}">${senderName}</p><div class="p-3 rounded-lg ${isUser ? 'message-user' : 'message-admin'}"><p class="text-sm break-words">${msg.text.replace(/\n/g, '<br>')}</p></div><span class="text-xs text-gray-500 mt-1 px-1">${new Date(msg.created_at).toLocaleTimeString('fa-IR')}</span>`;
-            messagesContainer.appendChild(msgElement);
-        }
-
         function openConversation(ticketId) {
+            if (currentTicketId === ticketId) return;
             currentTicketId = ticketId;
             db.ref(`tickets/${ticketId}`).update({ admin_unread: false });
 
             if (window.innerWidth < 768) {
-                conversationView.classList.remove('translate-x-full');
+                UI.showConversation();
             }
             
             document.querySelectorAll('.ticket-list-item').forEach(el => el.classList.toggle('active', el.dataset.ticketId === ticketId));
-            welcomeMessage.style.display = 'none';
-            conversationContent.style.display = 'flex';
+            DOMElements.conversation.welcome.style.display = 'none';
+            DOMElements.conversation.content.style.display = 'flex';
             
             db.ref(`tickets/${ticketId}`).on('value', (snapshot) => {
                 const ticketData = snapshot.val();
                 if (ticketData) {
-                    ticketSubjectHeader.textContent = ticketData.subject;
-                    ticketUserIdHeader.textContent = `کاربر: ${ticketData.user_name || ticketData.telegram_id}`;
-                    ticketStatusSelect.value = ticketData.status;
+                    DOMElements.conversation.subject.textContent = ticketData.subject;
+                    DOMElements.conversation.userId.textContent = `کاربر: ${ticketData.user_name || ticketData.telegram_id}`;
+                    DOMElements.forms.statusSelect.value = ticketData.status;
                 }
             });
             db.ref(`messages/${ticketId}`).on('value', (snapshot) => {
                 const messagesData = snapshot.val();
-                messagesContainer.innerHTML = '';
+                DOMElements.conversation.messages.innerHTML = '';
                 if (messagesData && allTickets[ticketId]) {
-                    Object.values(messagesData).sort((a, b) => new Date(a.created_at) - new Date(b.created_at)).forEach(msg => renderMessage(msg, allTickets[ticketId]));
+                    Object.values(messagesData)
+                          .sort((a, b) => new Date(a.created_at) - new Date(b.created_at))
+                          .forEach(msg => renderMessage(msg, allTickets[ticketId]));
                 }
-                messagesContainer.scrollTop = messagesContainer.scrollHeight;
+                DOMElements.conversation.messages.scrollTop = DOMElements.conversation.messages.scrollHeight;
             });
         }
-
-        function closeConversation() {
-            if (window.innerWidth < 768) {
-                conversationView.classList.add('translate-x-full');
-            }
-            currentTicketId = null;
-        }
-
-        replyForm.addEventListener('submit', async (e) => {
+        
+        async function handleReplySubmit(e) {
             e.preventDefault();
             if (!currentTicketId) return;
-            const messageText = replyMessageInput.value.trim();
+            const messageText = DOMElements.forms.replyInput.value.trim();
             if (messageText === '') return;
 
-            const payload = {
-                ticket_id: currentTicketId,
-                sender: 'admin',
-                text: messageText,
-            };
+            const payload = { ticket_id: currentTicketId, sender: 'admin', text: messageText };
 
             try {
                 const response = await fetch(`${WORKER_URL}/messages`, {
@@ -282,7 +428,6 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(payload),
                 });
-
                 if (!response.ok) throw new Error('خطا در ارسال پیام');
                 
                 await fetch(`${WORKER_URL}/tickets/${currentTicketId}`, {
@@ -290,98 +435,66 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ status: 'pending_user_reply' }),
                 });
-
-                replyMessageInput.value = '';
+                DOMElements.forms.replyInput.value = '';
+                DOMElements.forms.replyInput.style.height = 'auto';
             } catch (error) {
                 console.error("Failed to send message:", error);
-                alert('ارسال پیام با خطا مواجه شد.');
             }
-        });
-
-        ticketStatusSelect.addEventListener('change', async () => {
+        }
+        
+        async function handleStatusChange() {
             if (!currentTicketId) return;
-            const newStatus = ticketStatusSelect.value;
-            
             try {
                 const response = await fetch(`${WORKER_URL}/tickets/${currentTicketId}`, {
                     method: 'PATCH',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ status: newStatus }),
+                    body: JSON.stringify({ status: DOMElements.forms.statusSelect.value }),
                 });
-
-                if (!response.ok) {
-                    const err = await response.json();
-                    throw new Error(err.error || 'خطا در به‌روزرسانی وضعیت');
-                }
+                if (!response.ok) throw new Error('خطا در به‌روزرسانی وضعیت');
             } catch (error) {
                 console.error('Failed to update status:', error);
-                alert(` به‌روزرسانی وضعیت با خطا مواجه شد: ${error.message}`);
                 db.ref(`tickets/${currentTicketId}/status`).once('value', snapshot => {
-                    ticketStatusSelect.value = snapshot.val();
+                    DOMElements.forms.statusSelect.value = snapshot.val();
                 });
             }
+        }
+        
+        // --- EVENT LISTENERS ---
+        DOMElements.nav.tickets.addEventListener('click', (e) => { e.preventDefault(); UI.switchView('tickets'); });
+        DOMElements.nav.dashboard.addEventListener('click', (e) => { e.preventDefault(); UI.switchView('dashboard'); });
+        DOMElements.conversation.backBtn.addEventListener('click', UI.hideConversation);
+        DOMElements.forms.reply.addEventListener('submit', handleReplySubmit);
+        DOMElements.forms.statusSelect.addEventListener('change', handleStatusChange);
+        DOMElements.forms.search.addEventListener('input', applyFilters);
+        DOMElements.forms.filterStatus.addEventListener('change', applyFilters);
+        DOMElements.forms.filterDepartment.addEventListener('change', applyFilters);
+
+        // Auto-resize textarea
+        DOMElements.forms.replyInput.addEventListener('input', function () {
+            this.style.height = 'auto';
+            this.style.height = (this.scrollHeight) + 'px';
         });
 
-        function renderDashboard() {
-            const tickets = Object.values(allTickets);
-            const statusCounts = tickets.reduce((acc, t) => { acc[t.status] = (acc[t.status] || 0) + 1; return acc; }, {});
-            const deptCounts = tickets.reduce((acc, t) => { acc[t.department] = (acc[t.department] || 0) + 1; return acc; }, {});
-            
-            document.getElementById('stats-total').textContent = tickets.length;
-            document.getElementById('stats-open').textContent = (statusCounts.open || 0) + (statusCounts.pending_user_reply || 0);
-
-            if (statusChartInstance) statusChartInstance.destroy();
-            statusChartInstance = new Chart(document.getElementById('status-chart').getContext('2d'), { 
-                type: 'doughnut', 
-                data: { 
-                    labels: Object.keys(statusCounts).map(s => statusMap[s]?.text || s), 
-                    datasets: [{ data: Object.values(statusCounts), backgroundColor: ['#dcfce7', '#fef3c7', '#fee2e2'] }] 
-                } 
-            });
-
-            if (departmentChartInstance) departmentChartInstance.destroy();
-            departmentChartInstance = new Chart(document.getElementById('department-chart').getContext('2d'), { 
-                type: 'bar', 
-                data: { 
-                    labels: Object.keys(deptCounts).map(d => departmentMap[d] || d), 
-                    datasets: [{ label: 'تعداد تیکت', data: Object.values(deptCounts), backgroundColor: '#60a5fa' }] 
-                }, 
-                options: { indexAxis: 'y' } 
+        // --- INITIAL LOAD ---
+        function initializeApp() {
+            UI.showSkeleton();
+            db.ref('tickets').on('value', (snapshot) => {
+                allTickets = snapshot.val() || {};
+                applyFilters();
+                 // If a ticket was open, re-render its list item to update status/time
+                if (currentTicketId) {
+                    const activeItem = document.querySelector(`.ticket-list-item[data-ticket-id="${currentTicketId}"]`);
+                    if (activeItem) activeItem.classList.add('active');
+                }
+            }, (error) => {
+                console.error("Firebase read failed:", error.code);
+                UI.hideSkeleton();
+                DOMElements.ticketsList.container.innerHTML = '<p class="p-4 text-center text-red-500">خطا در اتصال به دیتابیس.</p>';
             });
         }
 
-
-        searchBox.addEventListener('input', applyFilters);
-        filterStatus.addEventListener('change', applyFilters);
-        filterDepartment.addEventListener('change', applyFilters);
-        backToListBtn.addEventListener('click', closeConversation);
-
-        const navTickets = document.getElementById('nav-tickets');
-        const navDashboard = document.getElementById('nav-dashboard');
-        const ticketsView = document.getElementById('tickets-view');
-        const dashboardView = document.getElementById('dashboard-view');
-        navTickets.addEventListener('click', () => {
-            ticketsView.classList.remove('hidden'); dashboardView.classList.add('hidden');
-            navTickets.classList.add('border-blue-500', 'font-semibold'); navTickets.classList.remove('text-gray-500');
-            navDashboard.classList.remove('border-blue-500', 'font-semibold'); navDashboard.classList.add('text-gray-500');
-        });
-        navDashboard.addEventListener('click', () => {
-            dashboardView.classList.remove('hidden'); ticketsView.classList.add('hidden');
-            navDashboard.classList.add('border-blue-500', 'font-semibold'); navDashboard.classList.remove('text-gray-500');
-            navTickets.classList.remove('border-blue-500', 'font-semibold'); navTickets.classList.add('text-gray-500');
-            renderDashboard();
-        });
-
-        // Initial load
-        showSkeletonLoader();
-        db.ref('tickets').on('value', (snapshot) => {
-            allTickets = snapshot.val() || {};
-            applyFilters();
-        }, (error) => {
-            console.error("Firebase read failed:", error.code);
-            hideSkeletonLoader();
-            ticketsListContainer.innerHTML = '<p class="p-4 text-center text-red-500">خطا در اتصال به دیتابیس.</p>';
-        });
+        initializeApp();
     </script>
 </body>
 </html>
+
