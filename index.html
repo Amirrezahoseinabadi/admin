@@ -60,7 +60,31 @@
 </head>
 <body class="h-screen overflow-hidden">
 
-    <div class="flex flex-col h-full w-full">
+    <!-- Login Screen -->
+    <div id="login-screen" class="flex items-center justify-center h-screen bg-gray-100">
+        <div class="w-full max-w-sm p-8 space-y-6 bg-white rounded-xl shadow-lg">
+            <h2 class="text-2xl font-bold text-center text-gray-800">ورود به پنل مدیریت</h2>
+            <form id="login-form" class="space-y-6">
+                <div>
+                    <label for="username" class="text-sm font-medium text-gray-700">نام کاربری</label>
+                    <input id="username" name="username" type="text" required class="w-full px-3 py-2 mt-1 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
+                </div>
+                <div>
+                    <label for="password" class="text-sm font-medium text-gray-700">رمز عبور</label>
+                    <input id="password" name="password" type="password" required class="w-full px-3 py-2 mt-1 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
+                </div>
+                <p id="login-error" class="text-sm text-red-600 text-center h-4"></p>
+                <div>
+                    <button type="submit" class="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                        ورود
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Admin Panel (Initially Hidden) -->
+    <div id="admin-panel" class="hidden flex flex-col h-full w-full">
         <!-- Main Content -->
         <main class="flex-1 flex flex-col h-full overflow-hidden">
             <!-- Main Header -->
@@ -190,6 +214,14 @@
         
         // --- DOM ELEMENTS ---
         const DOMElements = {
+            login: {
+                screen: document.getElementById('login-screen'),
+                form: document.getElementById('login-form'),
+                usernameInput: document.getElementById('username'),
+                passwordInput: document.getElementById('password'),
+                error: document.getElementById('login-error')
+            },
+            adminPanel: document.getElementById('admin-panel'),
             nav: {
                 tickets: document.getElementById('nav-tickets'),
                 dashboard: document.getElementById('nav-dashboard')
@@ -270,12 +302,10 @@
         };
 
         // --- RENDER FUNCTIONS ---
-        // *** FUNCTION MODIFIED FOR STABILITY ***
         function renderTicketsList(tickets) {
             UI.hideSkeleton();
             DOMElements.ticketsList.container.innerHTML = '';
             
-            // Filter out tickets without a valid creation date before sorting to prevent errors
             const validTickets = Object.keys(tickets)
                 .map(key => ({ id: key, ...tickets[key] }))
                 .filter(ticket => ticket && ticket.created_at);
@@ -290,7 +320,6 @@
             }
 
             sortedTickets.forEach(ticket => {
-                // Use default values to prevent errors if data is missing or malformed
                 const statusInfo = statusMap[ticket.status] || { text: 'نامشخص', className: 'status-closed' };
                 const departmentText = departmentMap[ticket.department] || 'دپارتمان نامشخص';
                 const subjectText = ticket.subject || 'بدون موضوع';
@@ -319,12 +348,10 @@
             });
         }
         
-        // *** FUNCTION MODIFIED FOR STABILITY ***
         function renderMessage(msg, ticketData) {
             const msgElement = document.createElement('div');
             const isUser = msg.sender === 'user';
             const senderName = isUser ? (ticketData.user_name || 'کاربر') : 'پشتیبانی';
-            // Ensure message text is a string to prevent errors
             const messageText = (msg.text || '').replace(/\n/g, '<br>');
 
             msgElement.className = `flex items-start gap-3 ${isUser ? '' : 'flex-row-reverse'}`;
@@ -386,7 +413,6 @@
         }
         
         // --- LOGIC FUNCTIONS ---
-        // *** FUNCTION MODIFIED FOR STABILITY ***
         function applyFilters() {
             const searchTerm = DOMElements.forms.search.value.toLowerCase();
             const status = DOMElements.forms.filterStatus.value;
@@ -399,7 +425,6 @@
 
             const filteredTickets = Object.keys(allTickets).filter(key => {
                 const ticket = allTickets[key];
-                // Ensure ticket is a valid object before filtering
                 if (!ticket) return false;
                 
                 const searchMatch = (ticket.subject || '').toLowerCase().includes(searchTerm) || 
@@ -470,7 +495,6 @@
                 DOMElements.forms.replyInput.style.height = 'auto';
             } catch (error) {
                 console.error("Failed to send message:", error);
-                // You could show an error message to the user here
             }
         }
         
@@ -485,10 +509,24 @@
                 if (!response.ok) throw new Error('خطا در به‌روزرسانی وضعیت');
             } catch (error) {
                 console.error('Failed to update status:', error);
-                // Revert the dropdown to the actual status from the database on failure
                 db.ref(`tickets/${currentTicketId}/status`).once('value', snapshot => {
                     DOMElements.forms.statusSelect.value = snapshot.val();
                 });
+            }
+        }
+
+        function handleLogin(e) {
+            e.preventDefault();
+            DOMElements.login.error.textContent = '';
+            const username = DOMElements.login.usernameInput.value;
+            const password = DOMElements.login.passwordInput.value;
+
+            if (username === 'Amirreza' && password === 'Amirreza9940') {
+                DOMElements.login.screen.classList.add('hidden');
+                DOMElements.adminPanel.classList.remove('hidden');
+                initializeApp();
+            } else {
+                DOMElements.login.error.textContent = 'نام کاربری یا رمز عبور اشتباه است.';
             }
         }
         
@@ -508,7 +546,10 @@
             this.style.height = (this.scrollHeight) + 'px';
         });
 
-        // --- INITIAL LOAD ---
+        // --- LOGIN SETUP ---
+        DOMElements.login.form.addEventListener('submit', handleLogin);
+
+        // --- INITIAL LOAD (called after successful login) ---
         function initializeApp() {
             UI.showSkeleton();
             db.ref('tickets').on('value', (snapshot) => {
@@ -526,7 +567,7 @@
             });
         }
 
-        initializeApp();
     </script>
 </body>
 </html>
+
